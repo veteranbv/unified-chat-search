@@ -607,6 +607,8 @@
     .selection-actions {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
     .file-summary {
@@ -1460,6 +1462,7 @@
           </div>
           <div class="section-body" id="section-selection" role="region" aria-labelledby="selection-heading">
             <div class="selection-actions">
+              <button id="select-all" class="ghost-button" type="button" disabled>Select All</button>
               <button id="export-selected" class="primary-action" type="button" disabled>
                 <span>Export Selected</span>
               </button>
@@ -1637,6 +1640,7 @@
           scopeMessages: 'Messages',
           scopeExact: 'Exact match',
           selectionHeading: 'Selection',
+          selectAll: 'Select All',
           exportSelected: 'Export Selected',
           clearSelection: 'Clear',
           timelineHeading: 'Timeline',
@@ -1715,6 +1719,7 @@
         scopeMessages: document.getElementById('scope-messages'),
         scopeExact: document.getElementById('scope-exact'),
         selectionCount: document.getElementById('selection-count'),
+        selectAll: document.getElementById('select-all'),
         exportSelected: document.getElementById('export-selected'),
         clearSelection: document.getElementById('clear-selection'),
         toggleOrder: document.getElementById('toggle-order'),
@@ -1957,6 +1962,10 @@
           exportConversations([conversation], { mode: 'individual' });
         });
 
+        elements.selectAll.addEventListener('click', () => {
+          selectAllVisibleConversations();
+        });
+
         elements.exportSelected.addEventListener('click', () => {
           openModal(elements.exportModal);
         });
@@ -1964,7 +1973,11 @@
         elements.clearSelection.addEventListener('click', () => {
           state.selectedIds.clear();
           updateSelectionUI();
-          renderConversationList();
+          if (Array.isArray(state.search.results)) {
+            renderConversationList(state.search.results);
+          } else {
+            renderConversationList();
+          }
         });
 
         elements.confirmExport.addEventListener('click', () => {
@@ -2093,6 +2106,7 @@
         elements.scopeMessages.nextElementSibling.textContent = strings.scopeMessages;
         elements.scopeExact.nextElementSibling.textContent = strings.scopeExact;
         elements.selectionHeading.textContent = strings.selectionHeading;
+        elements.selectAll.textContent = strings.selectAll || TRANSLATIONS.en.selectAll;
         elements.exportSelected.querySelector('span').textContent = strings.exportSelected;
         elements.clearSelection.textContent = strings.clearSelection;
         elements.timelineHeading.textContent = strings.timelineHeading;
@@ -2407,6 +2421,11 @@
         elements.conversationList.appendChild(fragment);
         unlockTimelineSectionHeight();
         updateSearchCount(list.length, state.conversations.length);
+        updateSelectionUI();
+      }
+
+      function getVisibleConversations() {
+        return Array.isArray(state.search.results) ? state.search.results : state.conversations;
       }
 
       function unlockTimelineSectionHeight() {
@@ -2515,6 +2534,34 @@
         updateSelectionUI();
       }
 
+      function selectAllVisibleConversations() {
+        const visibleConversations = getVisibleConversations();
+        if (!visibleConversations.length) {
+          updateSelectionUI();
+          return;
+        }
+
+        let added = false;
+        visibleConversations.forEach((conversation) => {
+          if (!state.selectedIds.has(conversation.uid)) {
+            state.selectedIds.add(conversation.uid);
+            added = true;
+          }
+        });
+
+        updateSelectionUI();
+
+        if (!added) {
+          return;
+        }
+
+        if (Array.isArray(state.search.results)) {
+          renderConversationList(state.search.results);
+        } else {
+          renderConversationList();
+        }
+      }
+
       function updateSelectionUI() {
         const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
         const selectedCount = state.selectedIds.size;
@@ -2522,6 +2569,12 @@
         const hasSelection = selectedCount > 0;
         elements.exportSelected.disabled = !hasSelection;
         elements.clearSelection.disabled = !hasSelection;
+        if (elements.selectAll) {
+          const visibleConversations = getVisibleConversations();
+          const totalVisible = visibleConversations.length;
+          const allVisibleSelected = totalVisible > 0 && visibleConversations.every((conversation) => state.selectedIds.has(conversation.uid));
+          elements.selectAll.disabled = totalVisible === 0 || allVisibleSelected;
+        }
       }
 
       function renderConversation(conversationId, options = {}) {
@@ -2853,7 +2906,9 @@
             return;
           }
           const lower = relativePath.toLowerCase();
-          if (lower.endsWith('conversations.json')) {
+          const normalizedPath = lower.replace(/\\/g, '/');
+          const isConversationFile = /(^|\/)conversations\.json$/.test(normalizedPath);
+          if (isConversationFile) {
             entries.push({ relativePath, entry });
           }
         });
@@ -2902,6 +2957,28 @@
           throw new Error('Invalid JSON');
         }
 
+        const sharedMetadata = detectSharedConversationMetadata(parsed);
+        if (sharedMetadata) {
+          const previewTitles = sharedMetadata
+            .map((item) => (item && item.title ? String(item.title) : '').trim())
+            .filter(Boolean)
+            .slice(0, 3);
+          const remainder = Math.max(0, sharedMetadata.length - previewTitles.length);
+          const parts = [];
+          if (previewTitles.length) {
+            parts.push(previewTitles.join(', '));
+          }
+          if (remainder > 0) {
+            parts.push(`+${remainder} more`);
+          }
+          const summary = parts.length ? ` (${parts.join(' · ')})` : '';
+          return {
+            conversations: [],
+            providerCounts: {},
+            warnings: [`Shared conversation metadata only${summary}. Messages are available in conversations.json.`]
+          };
+        }
+
         const conversations = Array.isArray(parsed)
           ? parsed
           : Array.isArray(parsed.conversations)
@@ -2937,6 +3014,29 @@
         });
 
         return { conversations: normalized, providerCounts, warnings };
+      }
+
+      function detectSharedConversationMetadata(payload) {
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : null;
+        if (!list || !list.length) {
+          return null;
+        }
+        const looksLikeSharedMetadata = list.every((item) => {
+          if (!item || typeof item !== 'object') {
+            return false;
+          }
+          const hasConversationId = Object.prototype.hasOwnProperty.call(item, 'conversation_id');
+          const lacksMessagePayload = !item.mapping && !item.conversation && !item.chat_messages && !item.messages;
+          return hasConversationId && lacksMessagePayload;
+        });
+        if (!looksLikeSharedMetadata) {
+          return null;
+        }
+        return list;
       }
 
       function detectProvider(conversation) {
