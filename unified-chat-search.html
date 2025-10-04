@@ -1,0 +1,3858 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Chat Search</title>
+  <meta name="description"
+    content="Unified Chat Search lets you load, search, and export conversations from multiple LLM providers in a single interface.">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    integrity="sha512-k5n+Q4YqWmXtcwP3Pi0tL0whO6XBtwTwK+LrpK7Dn/PQ/6UCxD4apYENGY2GvtG2BgqsYqS+8CA0nV0uJ7Czww=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='12' y1='10' x2='52' y2='52' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%2318b38b'/%3E%3Cstop offset='1' stop-color='%230f9b75'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='8' y='8' width='32' height='30' rx='10' fill='url(%23g)'/%3E%3Crect x='24' y='26' width='32' height='30' rx='10' fill='%2312c29a' opacity='.85'/%3E%3Cpath d='M22 30h12l-8 8h8l-10 10z' fill='%230b7f60' opacity='.35'/%3E%3Cpath d='M38 48h12l-8 8h8l-10 10z' transform='translate(-10 -12)' fill='%230b7f60' opacity='.28'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg-primary: #f7f7f8;
+      --bg-elevated: #ffffff;
+      --bg-sidebar: #f1f2f6;
+      --bg-sidebar-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(244, 245, 249, 0.92));
+      --bg-chip: rgba(16, 163, 127, 0.15);
+      --bg-user: #eceef3;
+      --bg-assistant: #ffffff;
+      --bg-system: #fff6e8;
+      --bg-tool: #f0ebff;
+      --border-color: #dce0ea;
+      --border-strong: #c6cbd8;
+      --text-primary: #202123;
+      --text-secondary: #4b4f5c;
+      --text-muted: #8a8fa1;
+      --accent: #10a37f;
+      --accent-contrast: #ffffff;
+      --danger: #d64550;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 22px;
+      --shadow-soft: 0 24px 50px rgba(21, 23, 36, 0.08);
+      --shadow-card: 0 32px 60px rgba(31, 34, 48, 0.12);
+      --transition: 0.25s ease;
+      --sidebar-width: 360px;
+      --font-stack: "Helvetica Neue", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body.dark-mode {
+      --bg-primary: #0f172a;
+      --bg-elevated: rgba(24, 31, 46, 0.92);
+      --bg-sidebar: rgba(17, 24, 39, 0.85);
+      --bg-sidebar-gradient: linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(12, 17, 27, 0.92));
+      --bg-chip: rgba(16, 163, 127, 0.28);
+      --bg-user: rgba(48, 56, 74, 0.92);
+      --bg-assistant: rgba(32, 33, 35, 0.9);
+      --bg-system: rgba(255, 213, 153, 0.12);
+      --bg-tool: rgba(138, 108, 255, 0.18);
+      --border-color: rgba(86, 93, 115, 0.35);
+      --border-strong: rgba(121, 125, 145, 0.45);
+      --text-primary: #f3f4f6;
+      --text-secondary: #cfd2dd;
+      --text-muted: #9ca3b8;
+      --shadow-soft: none;
+      --shadow-card: none;
+      background: linear-gradient(160deg, #0f172a 0%, #111827 35%, #0b1220 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-stack);
+      color: var(--text-primary);
+      background: linear-gradient(135deg, #f7f7f8 0%, #eef1f6 45%, #f9fafc 100%);
+      transition: background-color var(--transition), color var(--transition);
+      min-height: 100vh;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      margin: 0;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+
+    button,
+    input,
+    select {
+      font-family: inherit;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Global loading bar */
+    #global-loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    #global-loading-overlay.active {
+      background: rgba(16, 163, 127, 0.2);
+    }
+
+    #global-loading-overlay .loading-bar {
+      height: 4px;
+      width: 0;
+      background: var(--accent);
+      transition: width 0.15s ease;
+    }
+
+    .notification-bar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(222, 226, 236, 0.8);
+      box-shadow: 0 24px 60px rgba(31, 34, 48, 0.18);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1500;
+      color: var(--text-primary);
+      min-width: 240px;
+      max-width: calc(100% - 40px);
+    }
+
+    body.dark-mode .notification-bar {
+      background: rgba(17, 24, 39, 0.9);
+      border-color: rgba(86, 93, 115, 0.4);
+      box-shadow: 0 28px 70px rgba(5, 8, 15, 0.6);
+    }
+
+    .notification-bar.success {
+      border-color: rgba(16, 163, 127, 0.55);
+    }
+
+    .notification-bar.error {
+      border-color: rgba(214, 69, 80, 0.6);
+      color: var(--danger);
+    }
+
+    /* Upload screen */
+    .upload-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 16px;
+      background: radial-gradient(circle at top left, rgba(16, 163, 127, 0.14) 0%, transparent 46%),
+        radial-gradient(circle at bottom right, rgba(32, 33, 35, 0.12) 0%, transparent 52%);
+    }
+
+    body.dark-mode .upload-screen {
+      background: radial-gradient(circle at top left, rgba(16, 163, 127, 0.25) 0%, transparent 46%),
+        radial-gradient(circle at bottom right, rgba(6, 10, 18, 0.75) 0%, transparent 52%);
+    }
+
+    .upload-screen.dragging .upload-card {
+      border-color: var(--accent);
+      box-shadow: 0 28px 80px rgba(16, 163, 127, 0.25);
+    }
+
+    .upload-card {
+      width: min(460px, 100%);
+      padding: 56px 44px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 28px 90px rgba(31, 34, 48, 0.14);
+      -webkit-backdrop-filter: blur(22px);
+      backdrop-filter: blur(22px);
+      text-align: center;
+      display: grid;
+      gap: 18px;
+    }
+
+    body.dark-mode .upload-card {
+      background: rgba(24, 31, 46, 0.92);
+      border-color: rgba(86, 93, 115, 0.45);
+      box-shadow: 0 32px 95px rgba(5, 8, 15, 0.55);
+    }
+
+    .upload-icon {
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upload-lede {
+      font-size: 1.15rem;
+      line-height: 1.55;
+      color: var(--text-primary);
+    }
+
+    .upload-hint {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .upload-card code {
+      font-family: "JetBrains Mono", "Fira Code", "Source Code Pro", monospace;
+      background: rgba(16, 163, 127, 0.12);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .primary-action,
+    .ghost-button,
+    .icon-button {
+      border: none;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: transform var(--transition), background-color var(--transition), color var(--transition), box-shadow var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .primary-action i,
+    .ghost-button i,
+    .icon-button i {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .primary-action i,
+    .ghost-button i,
+    .icon-button i,
+    .primary-action i::before,
+    .ghost-button i::before,
+    .icon-button i::before {
+      pointer-events: none;
+    }
+
+    .primary-action {
+      background: linear-gradient(135deg, #16b38a, #0f9b75);
+      color: var(--accent-contrast);
+      padding: 11px 18px;
+      box-shadow: 0 18px 44px rgba(16, 163, 127, 0.24);
+    }
+
+    body.dark-mode .primary-action {
+      box-shadow: 0 22px 50px rgba(16, 163, 127, 0.35);
+    }
+
+    .primary-action:disabled {
+      background: rgba(16, 163, 127, 0.4);
+      cursor: not-allowed;
+      opacity: 0.6;
+      box-shadow: none;
+    }
+
+    .primary-action:not(:disabled):hover,
+    .ghost-button:not(:disabled):hover,
+    .icon-button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 22px 45px rgba(31, 34, 48, 0.14);
+    }
+
+    .ghost-button {
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--text-secondary);
+      padding: 9px 14px;
+      border: 1px solid rgba(220, 224, 234, 0.8);
+      box-shadow: 0 12px 28px rgba(31, 34, 48, 0.08);
+    }
+
+    body.dark-mode .ghost-button {
+      background: rgba(27, 34, 47, 0.85);
+      border-color: rgba(86, 93, 115, 0.35);
+      box-shadow: none;
+      color: var(--text-secondary);
+    }
+
+    .ghost-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .icon-button {
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--text-muted);
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      box-shadow: 0 12px 22px rgba(31, 34, 48, 0.08);
+    }
+
+    body.dark-mode .icon-button {
+      background: rgba(27, 34, 47, 0.8);
+      box-shadow: none;
+    }
+
+    .icon-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* App layout */
+    .app-container {
+      display: flex;
+      align-items: stretch;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+    }
+
+    .sidebar {
+      width: var(--sidebar-width);
+      flex: 0 0 var(--sidebar-width);
+      min-width: 280px;
+      max-width: 420px;
+      min-height: 0;
+      background: var(--bg-sidebar-gradient);
+      border-right: 1px solid rgba(255, 255, 255, 0.35);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-backdrop-filter: blur(22px);
+      backdrop-filter: blur(22px);
+      box-shadow: inset -1px 0 0 rgba(209, 213, 223, 0.4);
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      border-bottom: 1px solid rgba(209, 213, 223, 0.5);
+      background: rgba(255, 255, 255, 0.65);
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+    }
+
+    body.dark-mode .sidebar-header {
+      background: rgba(15, 23, 42, 0.7);
+      border-bottom-color: rgba(86, 93, 115, 0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1rem;
+    }
+
+    .brand-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .sidebar-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px 16px 24px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .sidebar-section {
+      padding: 16px 18px;
+      border: 1px solid rgba(209, 213, 223, 0.45);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.55);
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+      transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+      box-shadow: 0 14px 32px rgba(31, 34, 48, 0.06);
+    }
+
+    body.dark-mode .sidebar-section {
+      background: rgba(17, 24, 39, 0.72);
+      border-color: rgba(86, 93, 115, 0.35);
+      box-shadow: none;
+    }
+
+    .section-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .section-title-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .collapse-toggle {
+      border: none;
+      background: rgba(255, 255, 255, 0.65);
+      color: var(--text-muted);
+      border-radius: 12px;
+      padding: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 14px rgba(31, 34, 48, 0.08);
+      transition: transform var(--transition), box-shadow var(--transition), background-color var(--transition);
+    }
+
+    .collapse-toggle:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(31, 34, 48, 0.12);
+      background: rgba(255, 255, 255, 0.85);
+    }
+
+    body.dark-mode .collapse-toggle {
+      background: rgba(27, 34, 47, 0.85);
+      box-shadow: none;
+    }
+
+    body.dark-mode .collapse-toggle:hover {
+      background: rgba(27, 34, 47, 0.92);
+    }
+
+    .collapse-toggle i {
+      transition: transform var(--transition);
+    }
+
+    .sidebar-section.collapsed .collapse-toggle i {
+      transform: rotate(180deg);
+    }
+
+    .sidebar-section.collapsed {
+      background: rgba(255, 255, 255, 0.4);
+      box-shadow: none;
+    }
+
+    body.dark-mode .sidebar-section.collapsed {
+      background: rgba(17, 24, 39, 0.6);
+    }
+
+    .section-body {
+      display: grid;
+      gap: 12px;
+      transition: max-height 0.25s ease, opacity 0.25s ease;
+      max-height: 1000px;
+      opacity: 1;
+    }
+
+    .sidebar-section.collapsed .section-body {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .sidebar-section.collapsed .section-body>* {
+      opacity: 0;
+    }
+
+    .sidebar-section h2,
+    .sidebar-section legend {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .search-count {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .search-field {
+      position: relative;
+    }
+
+    #search-input {
+      width: 100%;
+      padding: 12px 42px 12px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(209, 213, 223, 0.6);
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text-primary);
+      box-shadow: 0 12px 26px rgba(31, 34, 48, 0.08);
+    }
+
+    #search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    body.dark-mode #search-input {
+      background: rgba(24, 31, 46, 0.85);
+      border-color: rgba(86, 93, 115, 0.45);
+      box-shadow: none;
+    }
+
+    body.dark-mode #search-input::placeholder {
+      color: rgba(203, 207, 222, 0.7);
+    }
+
+    #search-input:focus {
+      outline: 2px solid rgba(16, 163, 127, 0.4);
+      border-color: var(--accent);
+    }
+
+    #clear-search {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: var(--accent);
+      background: rgba(16, 163, 127, 0.1);
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .search-scope {
+      display: flex;
+      gap: 8px;
+      padding: 0;
+      margin: 0;
+      border: none;
+    }
+
+    .scope-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.6);
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(209, 213, 223, 0.35);
+      cursor: pointer;
+    }
+
+    body.dark-mode .scope-option {
+      background: rgba(27, 34, 47, 0.85);
+      border-color: rgba(86, 93, 115, 0.35);
+    }
+
+    .scope-option:hover {
+      border-color: rgba(16, 163, 127, 0.35);
+      box-shadow: 0 10px 20px rgba(16, 163, 127, 0.12);
+    }
+
+    .scope-option input {
+      accent-color: var(--accent);
+    }
+
+    body.dark-mode .scope-option:hover {
+      border-color: rgba(16, 163, 127, 0.45);
+      box-shadow: 0 12px 24px rgba(16, 163, 127, 0.25);
+    }
+
+    .selection-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .file-summary {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .file-chip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(222, 226, 236, 0.75);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      box-shadow: 0 12px 28px rgba(31, 34, 48, 0.08);
+    }
+
+    body.dark-mode .file-chip {
+      background: rgba(27, 34, 47, 0.85);
+      border-color: rgba(86, 93, 115, 0.35);
+      box-shadow: none;
+    }
+
+    .file-chip span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+
+    .file-chip .remove-file {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 50%;
+    }
+
+    body.dark-mode .file-chip .remove-file {
+      background: rgba(42, 51, 70, 0.9);
+    }
+
+    .conversation-list-section {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .conversation-list-section .section-body {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: none;
+      overflow: visible;
+    }
+
+    .conversation-list-section.collapsed .section-body {
+      max-height: 0;
+    }
+
+    .conversation-list {
+      display: grid;
+      gap: 14px;
+      padding: 4px 2px 24px;
+    }
+
+    .conversation-card {
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 18px;
+      border: 1px solid rgba(222, 226, 236, 0.8);
+      padding: 14px 16px;
+      display: grid;
+      gap: 8px;
+      transition: background-color var(--transition), border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 18px 36px rgba(31, 34, 48, 0.08);
+    }
+
+    .conversation-card:hover,
+    .conversation-card[aria-selected="true"] {
+      border-color: rgba(16, 163, 127, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 28px 60px rgba(16, 163, 127, 0.2);
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    body.dark-mode .conversation-card {
+      background: rgba(27, 33, 47, 0.85);
+      border-color: rgba(86, 93, 115, 0.32);
+      box-shadow: 0 16px 32px rgba(5, 8, 15, 0.45);
+    }
+
+    body.dark-mode .conversation-card:hover,
+    body.dark-mode .conversation-card[aria-selected="true"] {
+      border-color: rgba(16, 163, 127, 0.4);
+      background: rgba(33, 40, 56, 0.94);
+      box-shadow: 0 26px 54px rgba(16, 163, 127, 0.28);
+    }
+
+    .conversation-card .title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      padding-right: 28px;
+    }
+
+    .conversation-card .timestamp {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    body.dark-mode .conversation-card .timestamp {
+      color: rgba(203, 207, 222, 0.65);
+    }
+
+    .conversation-card .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    body.dark-mode .conversation-card .meta {
+      color: rgba(207, 211, 226, 0.75);
+    }
+
+    .provider-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(116, 170, 156, 0.15);
+      color: #74aa9c;
+    }
+
+    body.dark-mode .provider-pill {
+      background: rgba(116, 170, 156, 0.25);
+    }
+
+    .provider-pill.claude {
+      color: #d97757;
+      background: rgba(217, 119, 87, 0.15);
+    }
+
+    body.dark-mode .provider-pill.claude {
+      background: rgba(217, 119, 87, 0.25);
+    }
+
+    .provider-pill svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .conversation-card .preview {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      max-height: 2.8em;
+      overflow: hidden;
+    }
+
+    body.dark-mode .conversation-card .preview {
+      color: var(--text-secondary);
+    }
+
+    .conversation-card .selection-box {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+    }
+
+    .selection-box input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    /* Main panel */
+    .main-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.92);
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+      border-left: 1px solid rgba(209, 213, 223, 0.4);
+      min-width: 0;
+    }
+
+    body.dark-mode .main-panel {
+      background: rgba(17, 24, 39, 0.82);
+      border-left-color: rgba(86, 93, 115, 0.3);
+    }
+
+    .conversation-header {
+      padding: 20px 28px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.75);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 18px 28px rgba(31, 34, 48, 0.06);
+      box-sizing: border-box;
+    }
+
+    body.dark-mode .conversation-header {
+      background: rgba(17, 24, 39, 0.75);
+      border-bottom-color: rgba(86, 93, 115, 0.35);
+      box-shadow: none;
+    }
+
+    .conversation-title-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    #conversation-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .provider-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+    }
+
+    .provider-badge svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .conversation-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .switch-slider {
+      position: relative;
+      width: 46px;
+      height: 24px;
+      border-radius: 16px;
+      background: var(--border-color);
+      transition: background-color var(--transition);
+    }
+
+    .switch-slider::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      transition: transform var(--transition);
+      box-shadow: 0 2px 6px rgba(10, 10, 30, 0.15);
+    }
+
+    .switch input:checked+.switch-slider {
+      background: var(--accent);
+    }
+
+    .switch input:checked+.switch-slider::after {
+      transform: translateX(20px);
+      background: var(--accent-contrast);
+    }
+
+    .conversation-meta {
+      padding: 18px 28px;
+      border-bottom: 1px solid rgba(209, 213, 223, 0.45);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.7);
+      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(14px);
+      box-sizing: border-box;
+    }
+
+    body.dark-mode .conversation-meta {
+      background: rgba(17, 24, 39, 0.75);
+      border-bottom-color: rgba(86, 93, 115, 0.35);
+    }
+
+    .meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 163, 127, 0.12);
+      color: var(--accent);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 500;
+      border: 1px solid rgba(16, 163, 127, 0.2);
+      flex-wrap: wrap;
+      row-gap: 4px;
+      max-width: 100%;
+    }
+
+    body.dark-mode .meta-item {
+      background: rgba(16, 163, 127, 0.22);
+      border-color: rgba(16, 163, 127, 0.32);
+    }
+
+    .meta-item span {
+      overflow-wrap: anywhere;
+    }
+
+    .meta-item strong {
+      color: inherit;
+      font-weight: 600;
+    }
+
+    .conversation-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 32px 48px;
+      display: grid;
+      gap: 18px;
+      background: var(--bg-primary);
+      box-sizing: border-box;
+      min-width: 0;
+      width: 100%;
+    }
+
+    body.dark-mode .conversation-content {
+      background: linear-gradient(160deg, #0f172a 0%, #101726 45%, #0c1422 100%);
+    }
+
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      color: var(--text-muted);
+      display: grid;
+      gap: 12px;
+    }
+
+    .empty-state i {
+      font-size: 36px;
+      color: var(--accent);
+    }
+
+    .message {
+      display: grid;
+      gap: 10px;
+      padding: 18px 22px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(220, 224, 233, 0.8);
+      background: rgba(255, 255, 255, 0.92);
+      position: relative;
+      box-shadow: 0 18px 36px rgba(31, 34, 48, 0.08);
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .message.user {
+      background: var(--bg-user);
+      border-color: rgba(182, 194, 212, 0.9);
+    }
+
+    .message.assistant {
+      background: var(--bg-assistant);
+      border-color: rgba(204, 210, 224, 0.9);
+    }
+
+    .message.system {
+      background: var(--bg-system);
+      border-color: rgba(255, 198, 124, 0.55);
+    }
+
+    .message.tool {
+      background: var(--bg-tool);
+      border-color: rgba(138, 108, 255, 0.45);
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .message-role {
+      font-weight: 600;
+      text-transform: capitalize;
+      color: var(--text-primary);
+    }
+
+    .message-timestamp {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .message-content {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text-primary);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      min-width: 0;
+    }
+
+    body.dark-mode .message {
+      box-shadow: none;
+      border-color: rgba(86, 93, 115, 0.45);
+    }
+
+    body.dark-mode .message.user {
+      border-color: rgba(118, 130, 158, 0.5);
+    }
+
+    body.dark-mode .message.assistant {
+      border-color: rgba(86, 93, 115, 0.45);
+    }
+
+    .message-content pre {
+      background: #0b1722;
+      color: #f8f8f2;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      overflow: auto;
+      font-family: "JetBrains Mono", monospace;
+      position: relative;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    body.dark-mode .message-content pre {
+      background: #141a24;
+    }
+
+    .code-copy {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(16, 163, 127, 0.85);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .code-copy.success {
+      background: rgba(31, 172, 136, 0.95);
+    }
+
+    .message-content blockquote {
+      margin: 0;
+      padding-left: 16px;
+      border-left: 3px solid var(--border-strong);
+      color: var(--text-secondary);
+    }
+
+    .message-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0;
+      font-size: 0.9rem;
+    }
+
+    .message-content img,
+    .message-content video,
+    .message-content iframe {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+    }
+
+    .message-content th,
+    .message-content td {
+      border: 1px solid var(--border-color);
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .message-content a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .message-content a:hover {
+      text-decoration: underline;
+    }
+
+    .highlight {
+      background: rgba(255, 200, 46, 0.6);
+      color: inherit;
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+
+    body.dark-mode .highlight {
+      background: rgba(255, 200, 46, 0.8);
+    }
+
+    /* Modals */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 19, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 24px;
+    }
+
+    .modal-dialog {
+      width: min(480px, 100%);
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 26px;
+      border: 1px solid rgba(222, 226, 236, 0.8);
+      box-shadow: 0 32px 80px rgba(31, 34, 48, 0.2);
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+    }
+
+    body.dark-mode .modal-dialog {
+      background: rgba(17, 24, 39, 0.88);
+      border-color: rgba(86, 93, 115, 0.35);
+      box-shadow: 0 32px 90px rgba(5, 8, 15, 0.55);
+    }
+
+    .modal-header,
+    .modal-footer {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-footer {
+      border-top: 1px solid var(--border-color);
+      border-bottom: none;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-body {
+      padding: 18px 22px;
+      overflow-y: auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .modal-body fieldset {
+      border: 1px solid rgba(209, 213, 223, 0.55);
+      border-radius: 18px;
+      padding: 16px 18px;
+      display: grid;
+      gap: 12px;
+      background: rgba(249, 250, 252, 0.85);
+    }
+
+    body.dark-mode .modal-body fieldset {
+      background: rgba(27, 34, 47, 0.82);
+      border-color: rgba(86, 93, 115, 0.35);
+    }
+
+    .modal-body legend {
+      padding: 0 6px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .radio-option input {
+      accent-color: var(--accent);
+    }
+
+    #export-prefix {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    #language-select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      :root {
+        --sidebar-width: 320px;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .app-container {
+        flex-direction: column;
+        height: auto;
+      }
+
+      .sidebar {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        flex: 0 0 auto;
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+
+      .conversation-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .conversation-actions {
+        justify-content: flex-start;
+      }
+
+      .conversation-list-section {
+        flex: 1;
+        min-height: 0;
+      }
+
+      .conversation-list {
+        max-height: 38vh;
+        overflow-y: auto;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .upload-card {
+        padding: 32px 24px;
+      }
+
+      .sidebar-section {
+        padding: 14px 16px;
+      }
+
+    .conversation-content {
+      padding: 20px 18px 32px;
+    }
+
+      .conversation-meta {
+        padding: 12px 18px;
+      }
+
+      .conversation-header {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="global-loading-overlay" aria-hidden="true">
+    <div class="loading-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+  </div>
+
+  <div id="notification-bar" class="notification-bar" role="status" aria-live="polite" hidden></div>
+
+  <div id="upload-screen" class="upload-screen" role="region" aria-labelledby="upload-title">
+    <div class="upload-card">
+      <div class="upload-icon" aria-hidden="true">
+        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width="84" height="84">
+          <defs>
+            <linearGradient id='upload-gradient' x1='12' y1='10' x2='52' y2='52' gradientUnits='userSpaceOnUse'>
+              <stop offset='0' stop-color='#18b38b'/>
+              <stop offset='1' stop-color='#0f9b75'/>
+            </linearGradient>
+          </defs>
+          <rect x='8' y='8' width='32' height='30' rx='10' fill='url(#upload-gradient)'/>
+          <rect x='24' y='26' width='32' height='30' rx='10' fill='#12c29a' opacity='.85'/>
+          <path d='M22 30h12l-8 8h8l-10 10z' fill='#0b7f60' opacity='.35'/>
+          <path d='M38 48h12l-8 8h8l-10 10z' transform='translate(-10 -12)' fill='#0b7f60' opacity='.28'/>
+        </svg>
+      </div>
+      <div class="upload-branding">Unified Chat Search</div>
+      <h1 id="upload-title">Search All Your AI Conversations</h1>
+      <p class="upload-lede">Find anything across your ChatGPT and Claude chat history. Everything runs locally—your
+        conversations never leave your device.</p>
+      <button id="upload-button" type="button" class="primary-action">
+        <span>Load Your Chat Exports</span>
+      </button>
+      <p class="upload-hint">Drop JSON or ZIP files here, or click to browse. Load multiple exports at once.</p>
+      <input id="file-input" class="visually-hidden" type="file"
+        accept="application/json,.json,.zip,application/zip,application/x-zip-compressed" multiple
+        aria-label="Upload conversations JSON or ZIP files">
+    </div>
+  </div>
+
+  <div id="app-container" class="app-container" hidden>
+    <aside class="sidebar" role="navigation" aria-label="Conversation list">
+      <header class="sidebar-header">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true">
+            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width="42" height="42">
+              <defs>
+                <linearGradient id='brand-gradient' x1='12' y1='10' x2='52' y2='52' gradientUnits='userSpaceOnUse'>
+                  <stop offset='0' stop-color='#18b38b'/>
+                  <stop offset='1' stop-color='#0f9b75'/>
+                </linearGradient>
+              </defs>
+              <rect x='8' y='8' width='32' height='30' rx='10' fill='url(#brand-gradient)'/>
+              <rect x='24' y='26' width='32' height='30' rx='10' fill='#12c29a' opacity='.85'/>
+              <path d='M22 30h12l-8 8h8l-10 10z' fill='#0b7f60' opacity='.35'/>
+              <path d='M38 48h12l-8 8h8l-10 10z' transform='translate(-10 -12)' fill='#0b7f60' opacity='.28'/>
+            </svg>
+          </span>
+          <div class="brand-text">
+            <span class="brand-title">Unified Chat Search</span>
+            <span class="brand-subtitle">ChatGPT &amp; Claude</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="sidebar-content" role="region" aria-label="Filters and timeline">
+        <section class="sidebar-section" data-section="files">
+          <div class="section-top">
+            <div class="section-title-group">
+              <h2 id="ingest-heading">Loaded Files</h2>
+              <button id="add-files-button" type="button" class="ghost-button">
+                <span>Add</span>
+              </button>
+            </div>
+            <button class="collapse-toggle" type="button" aria-expanded="true" aria-controls="section-files">
+              <i class="fas fa-chevron-up" aria-hidden="true"></i>
+              <span class="visually-hidden">Collapse</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-files" role="region" aria-labelledby="ingest-heading">
+            <ul id="file-summary" class="file-summary" aria-live="polite"></ul>
+          </div>
+        </section>
+
+        <section class="sidebar-section" data-section="search">
+          <div class="section-top">
+            <div class="section-title-group">
+              <h2 id="search-heading">Search</h2>
+              <span id="search-count" class="search-count" aria-live="polite">0 chats</span>
+            </div>
+            <button class="collapse-toggle" type="button" aria-expanded="true" aria-controls="section-search">
+              <i class="fas fa-chevron-up" aria-hidden="true"></i>
+              <span class="visually-hidden">Collapse</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-search" role="region" aria-labelledby="search-heading">
+            <div class="search-field">
+              <label for="search-input" class="visually-hidden">Search conversations</label>
+              <input id="search-input" type="search" placeholder="Search titles or messages" autocomplete="off">
+              <button id="clear-search" class="icon-button" type="button" aria-label="Clear search" hidden>
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <fieldset class="search-scope" role="group" aria-label="Search scope">
+              <label class="scope-option">
+                <input id="scope-titles" type="checkbox" checked>
+                <span>Titles</span>
+              </label>
+              <label class="scope-option">
+                <input id="scope-messages" type="checkbox" checked>
+                <span>Messages</span>
+              </label>
+              <label class="scope-option">
+                <input id="scope-exact" type="checkbox">
+                <span>Exact match</span>
+              </label>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="sidebar-section" data-section="selection">
+          <div class="section-top">
+            <div class="section-title-group">
+              <h2 id="selection-heading">Selection</h2>
+              <span id="selection-count" aria-live="polite">0 selected</span>
+            </div>
+            <button class="collapse-toggle" type="button" aria-expanded="true" aria-controls="section-selection">
+              <i class="fas fa-chevron-up" aria-hidden="true"></i>
+              <span class="visually-hidden">Collapse</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-selection" role="region" aria-labelledby="selection-heading">
+            <div class="selection-actions">
+              <button id="export-selected" class="primary-action" type="button" disabled>
+                <span>Export Selected</span>
+              </button>
+              <button id="clear-selection" class="ghost-button" type="button" disabled>Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="sidebar-section conversation-list-section" data-section="timeline">
+          <div class="section-top">
+            <div class="section-title-group">
+              <h2 id="timeline-heading">Timeline</h2>
+              <button id="toggle-order" class="icon-button" type="button" title="Toggle chronological order"
+                aria-label="Toggle chronological order">
+                <i class="fas fa-sort" aria-hidden="true"></i>
+              </button>
+            </div>
+            <button class="collapse-toggle" type="button" aria-expanded="true" aria-controls="section-timeline">
+              <i class="fas fa-chevron-up" aria-hidden="true"></i>
+              <span class="visually-hidden">Collapse</span>
+            </button>
+          </div>
+          <div class="section-body" id="section-timeline" role="region" aria-labelledby="timeline-heading">
+            <div id="conversation-list" class="conversation-list" role="list"></div>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <main class="main-panel" role="main">
+      <header class="conversation-header">
+        <div class="conversation-title-group">
+          <span id="provider-badge" class="provider-badge" aria-hidden="true"></span>
+          <h1 id="conversation-title">Select a conversation</h1>
+        </div>
+        <div class="conversation-actions">
+          <label class="switch" title="Toggle markdown rendering">
+            <input id="markdown-toggle" type="checkbox" checked>
+            <span class="switch-slider" aria-hidden="true"></span>
+            <span class="switch-label">Markdown</span>
+          </label>
+          <button id="provider-link" class="ghost-button" type="button" disabled>
+            <span>Open in Provider</span>
+          </button>
+          <button id="export-current" class="ghost-button" type="button" disabled>
+            <span>Export Chat</span>
+          </button>
+          <button id="settings-button" class="icon-button" type="button" aria-haspopup="dialog"
+            aria-controls="settings-modal" title="Open settings">
+            <i class="fas fa-sliders" aria-hidden="true"></i>
+            <span class="visually-hidden">Settings</span>
+          </button>
+        </div>
+      </header>
+
+      <section id="conversation-meta" class="conversation-meta" aria-live="polite"></section>
+
+      <section id="conversation-content" class="conversation-content" aria-live="polite">
+        <div class="empty-state" id="empty-state">
+          <i class="fas fa-inbox" aria-hidden="true"></i>
+          <p>Load conversations to start exploring.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="settings-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <div class="modal-dialog">
+      <header class="modal-header">
+        <h2 id="settings-title">Settings</h2>
+        <button type="button" class="icon-button" data-close-modal>
+          <i class="fas fa-times" aria-hidden="true"></i>
+          <span class="visually-hidden">Close settings</span>
+        </button>
+      </header>
+      <div class="modal-body">
+        <fieldset>
+          <legend>Appearance</legend>
+          <label class="switch">
+            <input id="dark-mode-toggle" type="checkbox">
+            <span class="switch-slider" aria-hidden="true"></span>
+            <span class="switch-label">Dark mode</span>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Language</legend>
+          <label for="language-select">Interface language</label>
+          <select id="language-select">
+            <option value="en">English</option>
+            <option value="it">Italiano</option>
+          </select>
+        </fieldset>
+        <fieldset>
+          <legend>Reading</legend>
+          <label class="switch">
+            <input id="remember-scroll-toggle" type="checkbox" checked>
+            <span class="switch-slider" aria-hidden="true"></span>
+            <span class="switch-label">Remember scroll position per chat</span>
+          </label>
+        </fieldset>
+      </div>
+      <footer class="modal-footer">
+        <button type="button" class="ghost-button" data-close-modal>Close</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="export-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="export-title" hidden>
+    <div class="modal-dialog">
+      <header class="modal-header">
+        <h2 id="export-title">Export conversations</h2>
+        <button type="button" class="icon-button" data-close-modal>
+          <i class="fas fa-times" aria-hidden="true"></i>
+          <span class="visually-hidden">Close export options</span>
+        </button>
+      </header>
+      <div class="modal-body">
+        <fieldset>
+          <legend>Export scope</legend>
+          <label class="radio-option">
+            <input type="radio" name="export-mode" value="combined" checked>
+            <span>Single Markdown file with all selected chats</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="export-mode" value="separate">
+            <span>Separate Markdown file per chat</span>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>Filename prefix</legend>
+          <input id="export-prefix" type="text" placeholder="Optional prefix (e.g. TeamSync-)" maxlength="60">
+        </fieldset>
+      </div>
+      <footer class="modal-footer">
+        <button id="confirm-export" type="button" class="primary-action">Export</button>
+        <button type="button" class="ghost-button" data-close-modal>Cancel</button>
+      </footer>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    (() => {
+      'use strict';
+
+      const PROVIDERS = {
+        chatgpt: 'chatgpt',
+        claude: 'claude'
+      };
+
+      const STORAGE_KEYS = {
+        darkMode: 'ucs.pref.darkMode',
+        markdown: 'ucs.pref.markdown',
+        language: 'ucs.pref.language',
+        rememberScroll: 'ucs.pref.rememberScroll',
+        searchQuery: 'ucs.state.searchQuery',
+        searchScopes: 'ucs.state.searchScopes'
+      };
+
+      const COLLAPSE_STORAGE_KEY = 'ucs.pref.sidebarCollapse';
+
+      const TRANSLATIONS = {
+        en: {
+          appName: 'Unified Chat Search',
+          uploadTitle: 'Search All Your AI Conversations',
+          uploadLede: 'Drag & drop ZIP exports or choose conversations JSON from ChatGPT and Claude. Conversations stay on your device.',
+          uploadHint: 'Tip: Drop ZIP exports directly or choose any mix of conversations.json files—everything stays on your device.',
+          chooseFiles: 'Choose JSON or ZIP Files',
+          addFiles: 'Add Files',
+          loadedFiles: 'Loaded Files',
+          searchHeading: 'Search',
+          searchPlaceholder: 'Search titles or messages',
+          scopeTitles: 'Titles',
+          scopeMessages: 'Messages',
+          scopeExact: 'Exact match',
+          selectionHeading: 'Selection',
+          exportSelected: 'Export Selected',
+          clearSelection: 'Clear',
+          timelineHeading: 'Timeline',
+          toggleOrder: 'Toggle chronological order',
+          markdownLabel: 'Markdown',
+          openInProvider: 'Open in Provider',
+          exportChat: 'Export Chat',
+          settings: 'Settings',
+          selectConversation: 'Select a conversation',
+          emptyState: 'Load conversations to start exploring.',
+          appearance: 'Appearance',
+          darkMode: 'Dark mode',
+          languageSection: 'Language',
+          languageLabel: 'Interface language',
+          reading: 'Reading',
+          rememberScroll: 'Remember scroll position per chat',
+          exportModalTitle: 'Export conversations',
+          exportCombined: 'Single Markdown file with all selected chats',
+          exportSeparate: 'Separate Markdown file per chat',
+          filenamePrefix: 'Optional prefix (e.g. TeamSync-)',
+          exportAction: 'Export',
+          cancel: 'Cancel',
+          fileSummaryEmpty: 'No files loaded yet',
+          metaProvider: 'Provider',
+          metaCreated: 'Created',
+          metaUpdated: 'Updated',
+          metaMessages: 'Messages',
+          metaConversationId: 'Conversation ID',
+          metaUuid: 'UUID',
+          metaSource: 'Source',
+          emptyConversation: 'No messages available.',
+          collapseSection: 'Collapse section',
+          expandSection: 'Expand section',
+          searchCount: (visible, total) => {
+            if (total === 0) return '0 chats';
+            if (visible === total) {
+              return `${total.toLocaleString()} chats`;
+            }
+            return `${visible.toLocaleString()} of ${total.toLocaleString()} chats`;
+          },
+          selectionCount: (count) => {
+            if (count === 0) return '0 selected';
+            return `${count} selected`;
+          },
+          messageCount: (count) => (count === 1 ? '1 message' : `${count} messages`),
+          loadedFileLabel: (name, total, providerMap) => {
+            const providerSummary = Object.entries(providerMap)
+              .map(([provider, amount]) => `${amount} ${provider}`)
+              .join(', ');
+            return `${name} · ${total} chats${providerSummary ? ` · ${providerSummary}` : ''}`;
+          },
+          importSuccess: (count) => `${count} conversations added`,
+          importPartial: 'Some files could not be loaded.',
+          importError: (fileName) => `Could not read ${fileName}`,
+          removeFile: 'Remove file',
+          exportSuccess: 'Chats exported'
+        }
+      };
+
+      const elements = {
+        body: document.body,
+        loadingOverlay: document.getElementById('global-loading-overlay'),
+        loadingBar: document.querySelector('#global-loading-overlay .loading-bar'),
+        notificationBar: document.getElementById('notification-bar'),
+        uploadScreen: document.getElementById('upload-screen'),
+        uploadButton: document.getElementById('upload-button'),
+        fileInput: document.getElementById('file-input'),
+        appContainer: document.getElementById('app-container'),
+        addFilesButton: document.getElementById('add-files-button'),
+        fileSummary: document.getElementById('file-summary'),
+        searchHeading: document.getElementById('search-heading'),
+        searchInput: document.getElementById('search-input'),
+        clearSearch: document.getElementById('clear-search'),
+        searchCount: document.getElementById('search-count'),
+        scopeTitles: document.getElementById('scope-titles'),
+        scopeMessages: document.getElementById('scope-messages'),
+        scopeExact: document.getElementById('scope-exact'),
+        selectionCount: document.getElementById('selection-count'),
+        exportSelected: document.getElementById('export-selected'),
+        clearSelection: document.getElementById('clear-selection'),
+        toggleOrder: document.getElementById('toggle-order'),
+        conversationList: document.getElementById('conversation-list'),
+        providerBadge: document.getElementById('provider-badge'),
+        conversationTitle: document.getElementById('conversation-title'),
+        markdownToggle: document.getElementById('markdown-toggle'),
+        providerLink: document.getElementById('provider-link'),
+        exportCurrent: document.getElementById('export-current'),
+        settingsButton: document.getElementById('settings-button'),
+        conversationMeta: document.getElementById('conversation-meta'),
+        conversationContent: document.getElementById('conversation-content'),
+        emptyState: document.getElementById('empty-state'),
+        settingsModal: document.getElementById('settings-modal'),
+        exportModal: document.getElementById('export-modal'),
+        modalCloseButtons: document.querySelectorAll('[data-close-modal]'),
+        darkModeToggle: document.getElementById('dark-mode-toggle'),
+        languageSelect: document.getElementById('language-select'),
+        rememberScrollToggle: document.getElementById('remember-scroll-toggle'),
+        uploadTitle: document.getElementById('upload-title'),
+        uploadLede: document.querySelector('.upload-lede'),
+        uploadHint: document.querySelector('.upload-hint'),
+        selectionHeading: document.getElementById('selection-heading'),
+        timelineHeading: document.getElementById('timeline-heading'),
+        exportModalTitle: document.getElementById('export-title'),
+        exportModeOptions: document.getElementsByName('export-mode'),
+        exportPrefix: document.getElementById('export-prefix'),
+        confirmExport: document.getElementById('confirm-export'),
+        sidebarSections: document.querySelectorAll('.sidebar-section[data-section]')
+      };
+
+      const state = {
+        conversations: [],
+        conversationMap: new Map(),
+        files: new Map(),
+        order: 'desc',
+        selectedIds: new Set(),
+        currentConversationId: null,
+        scrollPositions: new Map(),
+        preferences: {
+          darkMode: false,
+          markdown: true,
+          language: 'en',
+          rememberScroll: true,
+          collapsedSections: {
+            files: false,
+            search: false,
+            selection: false,
+            timeline: false
+          }
+        },
+        search: {
+          query: '',
+          scopeTitles: true,
+          scopeMessages: true,
+          exact: false,
+          results: null
+        },
+        fuse: null
+      };
+
+      let lastFocusedElement = null;
+
+      function isZipFile(file) {
+        if (!file) {
+          return false;
+        }
+        const name = (file.name || '').toLowerCase();
+        const type = (file.type || '').toLowerCase();
+        return name.endsWith('.zip') || type.includes('zip');
+      }
+
+      const providerLabels = {
+        [PROVIDERS.chatgpt]: 'ChatGPT',
+        [PROVIDERS.claude]: 'Claude'
+      };
+
+      function getStrings() {
+        return TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+      }
+
+      function init() {
+        restorePreferences();
+        applyTranslations();
+        wireUploadArea();
+        bindControls();
+        initializeCollapsibleSections();
+        applyAppearance();
+        updateMarkdownToggle();
+        updateSearchScopeInputs();
+        updateSearchCount();
+        updateSelectionUI();
+        elements.clearSearch.hidden = state.search.query.length === 0;
+        closeModal(elements.settingsModal);
+        closeModal(elements.exportModal);
+      }
+
+      function wireUploadArea() {
+        const dropTarget = elements.uploadScreen;
+        dropTarget.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          dropTarget.classList.add('dragging');
+        });
+        dropTarget.addEventListener('dragleave', (event) => {
+          event.preventDefault();
+          dropTarget.classList.remove('dragging');
+        });
+        dropTarget.addEventListener('drop', (event) => {
+          event.preventDefault();
+          dropTarget.classList.remove('dragging');
+          const files = Array.from(event.dataTransfer.files || []);
+          if (files.length === 0) {
+            return;
+          }
+          ingestFiles(files);
+        });
+
+        elements.uploadButton.addEventListener('click', () => {
+          elements.fileInput.click();
+        });
+
+        elements.fileInput.addEventListener('change', (event) => {
+          const files = Array.from(event.target.files || []);
+          if (files.length === 0) {
+            return;
+          }
+          ingestFiles(files);
+          elements.fileInput.value = '';
+        });
+
+        elements.addFilesButton.addEventListener('click', () => {
+          elements.fileInput.click();
+        });
+      }
+
+      function bindControls() {
+        const debouncedSearch = debounce(() => {
+          applySearch();
+        }, 300);
+
+        elements.toggleOrder.addEventListener('click', () => {
+          state.order = state.order === 'desc' ? 'asc' : 'desc';
+          sortConversations();
+          if (state.search.query.trim()) {
+            applySearch();
+          } else {
+            renderConversationList();
+          }
+        });
+
+        elements.markdownToggle.addEventListener('change', (event) => {
+          const enabled = Boolean(event.target.checked);
+          state.preferences.markdown = enabled;
+          persistPreference(STORAGE_KEYS.markdown, enabled);
+          updateMarkdownToggle();
+          if (state.currentConversationId) {
+            renderConversation(state.currentConversationId, { preserveScroll: true });
+          }
+        });
+
+        elements.darkModeToggle.addEventListener('change', (event) => {
+          const enabled = Boolean(event.target.checked);
+          state.preferences.darkMode = enabled;
+          persistPreference(STORAGE_KEYS.darkMode, enabled);
+          applyAppearance();
+        });
+
+        elements.rememberScrollToggle.addEventListener('change', (event) => {
+          const enabled = Boolean(event.target.checked);
+          state.preferences.rememberScroll = enabled;
+          persistPreference(STORAGE_KEYS.rememberScroll, enabled);
+          if (!enabled) {
+            state.scrollPositions.clear();
+          }
+        });
+
+        elements.languageSelect.addEventListener('change', (event) => {
+          const lang = event.target.value || 'en';
+          state.preferences.language = lang;
+          persistPreference(STORAGE_KEYS.language, lang);
+          applyTranslations();
+          renderConversationList();
+          if (state.currentConversationId) {
+            renderConversation(state.currentConversationId, { preserveScroll: true });
+          }
+          updateSearchCount();
+          updateSelectionUI();
+        });
+
+        elements.searchInput.addEventListener('input', (event) => {
+          const value = event.target.value;
+          state.search.query = value;
+          persistPreference(STORAGE_KEYS.searchQuery, value);
+          elements.clearSearch.hidden = value.length === 0;
+          debouncedSearch();
+        });
+        elements.clearSearch.addEventListener('click', () => {
+          elements.searchInput.value = '';
+          state.search.query = '';
+          persistPreference(STORAGE_KEYS.searchQuery, '');
+          applySearch();
+        });
+        elements.scopeTitles.addEventListener('change', () => {
+          state.search.scopeTitles = Boolean(elements.scopeTitles.checked);
+          persistSearchScopes();
+          rebuildSearchIndex();
+          applySearch();
+        });
+        elements.scopeMessages.addEventListener('change', () => {
+          state.search.scopeMessages = Boolean(elements.scopeMessages.checked);
+          persistSearchScopes();
+          rebuildSearchIndex();
+          applySearch();
+        });
+        elements.scopeExact.addEventListener('change', () => {
+          state.search.exact = Boolean(elements.scopeExact.checked);
+          persistSearchScopes();
+          rebuildSearchIndex();
+          applySearch();
+        });
+
+        elements.conversationList.addEventListener('click', handleConversationListClick);
+
+        elements.providerLink.addEventListener('click', () => {
+          const conversation = state.conversationMap.get(state.currentConversationId);
+          if (!conversation) {
+            return;
+          }
+          const url = buildProviderUrl(conversation);
+          if (url) {
+            window.open(url, '_blank', 'noopener');
+          }
+        });
+
+        elements.exportCurrent.addEventListener('click', () => {
+          const conversation = state.conversationMap.get(state.currentConversationId);
+          if (!conversation) {
+            return;
+          }
+          exportConversations([conversation], { mode: 'individual' });
+        });
+
+        elements.exportSelected.addEventListener('click', () => {
+          openModal(elements.exportModal);
+        });
+
+        elements.clearSelection.addEventListener('click', () => {
+          state.selectedIds.clear();
+          updateSelectionUI();
+          renderConversationList();
+        });
+
+        elements.confirmExport.addEventListener('click', () => {
+          const selectedConversations = Array.from(state.selectedIds)
+            .map((id) => state.conversationMap.get(id))
+            .filter(Boolean);
+          if (!selectedConversations.length) {
+            return;
+          }
+          const mode = Array.from(elements.exportModeOptions).find((input) => input.checked)?.value || 'combined';
+          const prefix = elements.exportPrefix.value.trim();
+          exportConversations(selectedConversations, { mode, prefix });
+          closeModal(elements.exportModal);
+        });
+
+        elements.modalCloseButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            closeModal(button.closest('.modal'));
+          });
+        });
+
+        [elements.settingsModal, elements.exportModal].forEach((modal) => {
+          if (!modal) {
+            return;
+          }
+          modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+              closeModal(modal);
+            }
+          });
+        });
+
+        elements.settingsButton.addEventListener('click', () => {
+          openModal(elements.settingsModal);
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            [elements.settingsModal, elements.exportModal].forEach((modal) => {
+              if (modal && !modal.hasAttribute('hidden')) {
+                closeModal(modal);
+              }
+            });
+          }
+        });
+      }
+
+      function restorePreferences() {
+        const storedDark = localStorage.getItem(STORAGE_KEYS.darkMode);
+        if (storedDark !== null) {
+          state.preferences.darkMode = storedDark === 'true';
+        }
+        elements.darkModeToggle.checked = state.preferences.darkMode;
+
+        const storedMarkdown = localStorage.getItem(STORAGE_KEYS.markdown);
+        if (storedMarkdown !== null) {
+          state.preferences.markdown = storedMarkdown === 'true';
+        }
+        elements.markdownToggle.checked = state.preferences.markdown;
+
+        const storedRemember = localStorage.getItem(STORAGE_KEYS.rememberScroll);
+        if (storedRemember !== null) {
+          state.preferences.rememberScroll = storedRemember === 'true';
+        }
+        elements.rememberScrollToggle.checked = state.preferences.rememberScroll;
+
+        const storedLanguage = localStorage.getItem(STORAGE_KEYS.language);
+        if (storedLanguage) {
+          state.preferences.language = TRANSLATIONS[storedLanguage] ? storedLanguage : 'en';
+        }
+        elements.languageSelect.value = state.preferences.language;
+
+        const storedQuery = localStorage.getItem(STORAGE_KEYS.searchQuery);
+        if (storedQuery) {
+          state.search.query = storedQuery;
+          elements.searchInput.value = storedQuery;
+          elements.clearSearch.hidden = storedQuery.length === 0;
+        }
+
+        const storedScopes = localStorage.getItem(STORAGE_KEYS.searchScopes);
+        if (storedScopes) {
+          try {
+            const parsed = JSON.parse(storedScopes);
+            state.search.scopeTitles = parsed.scopeTitles !== undefined ? Boolean(parsed.scopeTitles) : true;
+            state.search.scopeMessages = parsed.scopeMessages !== undefined ? Boolean(parsed.scopeMessages) : true;
+            state.search.exact = parsed.exact !== undefined ? Boolean(parsed.exact) : false;
+          } catch (error) {
+            // ignore malformed preference
+          }
+        }
+
+        const storedCollapse = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+        if (storedCollapse) {
+          try {
+            const parsed = JSON.parse(storedCollapse);
+            state.preferences.collapsedSections = {
+              ...state.preferences.collapsedSections,
+              ...parsed
+            };
+          } catch (error) {
+            // ignore malformed preference
+          }
+        }
+      }
+
+      function applyTranslations() {
+        const lang = state.preferences.language;
+        const strings = TRANSLATIONS[lang] || TRANSLATIONS.en;
+
+        elements.uploadTitle.textContent = strings.uploadTitle;
+        elements.uploadLede.textContent = strings.uploadLede;
+        elements.uploadHint.textContent = strings.uploadHint;
+        elements.uploadButton.querySelector('span').textContent = strings.chooseFiles;
+        elements.addFilesButton.querySelector('span').textContent = strings.addFiles;
+        document.querySelector('title').textContent = strings.appName;
+
+        document.querySelector('meta[name="description"]').setAttribute(
+          'content',
+          strings.uploadLede
+        );
+
+        document.querySelector('h2#ingest-heading').textContent = strings.loadedFiles;
+        elements.searchHeading.textContent = strings.searchHeading;
+        elements.searchInput.placeholder = strings.searchPlaceholder;
+        elements.scopeTitles.nextElementSibling.textContent = strings.scopeTitles;
+        elements.scopeMessages.nextElementSibling.textContent = strings.scopeMessages;
+        elements.scopeExact.nextElementSibling.textContent = strings.scopeExact;
+        elements.selectionHeading.textContent = strings.selectionHeading;
+        elements.exportSelected.querySelector('span').textContent = strings.exportSelected;
+        elements.clearSelection.textContent = strings.clearSelection;
+        elements.timelineHeading.textContent = strings.timelineHeading;
+        elements.toggleOrder.title = strings.toggleOrder;
+        elements.toggleOrder.setAttribute('aria-label', strings.toggleOrder);
+        elements.markdownToggle.nextElementSibling.nextElementSibling.textContent = strings.markdownLabel;
+        elements.providerLink.querySelector('span').textContent = strings.openInProvider;
+        elements.exportCurrent.querySelector('span').textContent = strings.exportChat;
+        elements.settingsButton.querySelector('.visually-hidden').textContent = strings.settings;
+        elements.conversationTitle.textContent = strings.selectConversation;
+        elements.emptyState.querySelector('p').textContent = strings.emptyState;
+        elements.settingsModal.querySelector('.modal-header h2').textContent = strings.settings;
+        elements.settingsModal.querySelectorAll('legend')[0].textContent = strings.appearance;
+        elements.settingsModal.querySelectorAll('legend')[1].textContent = strings.languageSection;
+        elements.settingsModal.querySelectorAll('legend')[2].textContent = strings.reading;
+        elements.darkModeToggle.nextElementSibling.nextElementSibling.textContent = strings.darkMode;
+        elements.settingsModal.querySelector('label[for="language-select"]').textContent = strings.languageLabel;
+        elements.rememberScrollToggle.nextElementSibling.nextElementSibling.textContent = strings.rememberScroll;
+        elements.exportModalTitle.textContent = strings.exportModalTitle;
+        const radioLabels = elements.exportModal.querySelectorAll('.radio-option span');
+        radioLabels[0].textContent = strings.exportCombined;
+        radioLabels[1].textContent = strings.exportSeparate;
+        elements.exportPrefix.placeholder = strings.filenamePrefix;
+        elements.confirmExport.textContent = strings.exportAction;
+        elements.exportModal.querySelector('.modal-footer .ghost-button').textContent = strings.cancel;
+        elements.settingsModal.querySelector('.modal-footer .ghost-button').textContent = strings.cancel;
+
+        updateCollapseToggleLabels();
+        updateSearchCount();
+        updateSelectionUI();
+      }
+
+      function applyAppearance() {
+        if (state.preferences.darkMode) {
+          elements.body.classList.add('dark-mode');
+        } else {
+          elements.body.classList.remove('dark-mode');
+        }
+      }
+
+      function updateMarkdownToggle() {
+        elements.markdownToggle.checked = state.preferences.markdown;
+      }
+
+      function updateSearchScopeInputs() {
+        elements.scopeTitles.checked = state.search.scopeTitles;
+        elements.scopeMessages.checked = state.search.scopeMessages;
+        elements.scopeExact.checked = state.search.exact;
+      }
+
+      function persistPreference(key, value) {
+        try {
+          localStorage.setItem(key, typeof value === 'string' ? value : String(value));
+        } catch (error) {
+          // storage may be unavailable; fail silently
+        }
+      }
+
+      function persistSearchScopes() {
+        const payload = {
+          scopeTitles: state.search.scopeTitles,
+          scopeMessages: state.search.scopeMessages,
+          exact: state.search.exact
+        };
+        try {
+          localStorage.setItem(STORAGE_KEYS.searchScopes, JSON.stringify(payload));
+        } catch (error) {
+          // ignore storage failures
+        }
+      }
+
+      function setLoading(active) {
+        if (active) {
+          elements.loadingOverlay.classList.add('active');
+          elements.loadingOverlay.removeAttribute('aria-hidden');
+        } else {
+          elements.loadingOverlay.classList.remove('active');
+          elements.loadingOverlay.setAttribute('aria-hidden', 'true');
+          if (elements.loadingBar) {
+            elements.loadingBar.style.width = '0%';
+            elements.loadingBar.setAttribute('aria-valuenow', '0');
+          }
+        }
+      }
+
+      function setLoadingProgress(percent) {
+        if (!elements.loadingBar) {
+          return;
+        }
+        const value = Math.min(100, Math.max(0, Math.round(percent)));
+        elements.loadingBar.style.width = `${value}%`;
+        elements.loadingBar.setAttribute('aria-valuenow', String(value));
+      }
+
+      function showNotification(message, variant = 'success', timeout = 3800) {
+        if (!elements.notificationBar) {
+          return;
+        }
+        elements.notificationBar.textContent = message;
+        elements.notificationBar.className = `notification-bar ${variant}`;
+        elements.notificationBar.hidden = false;
+        if (timeout > 0) {
+          window.setTimeout(() => {
+            elements.notificationBar.hidden = true;
+          }, timeout);
+        }
+      }
+
+      async function ingestFiles(files) {
+        if (!files.length) {
+          return;
+        }
+        setLoading(true);
+        const totalFiles = files.length;
+        let processedConversations = 0;
+        let successfulFiles = 0;
+        let hadErrors = false;
+        const langStrings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+
+        for (let index = 0; index < files.length; index += 1) {
+          const file = files[index];
+          try {
+            if (isZipFile(file)) {
+              const { added, sources, warnings } = await processZipFile(file);
+              processedConversations += added;
+              successfulFiles += sources;
+              if (warnings.length) {
+                hadErrors = true;
+                showNotification(warnings.join(' '), 'error', 6000);
+              }
+            } else {
+              const text = await readFileAsText(file);
+              const result = registerJsonPayload(text, file.name, 'file');
+              processedConversations += result.added;
+              if (result.added > 0) {
+                successfulFiles += 1;
+              }
+              if (result.warnings.length) {
+                hadErrors = true;
+                showNotification(result.warnings.join(' '), 'error', 6000);
+              }
+            }
+          } catch (error) {
+            hadErrors = true;
+            showNotification(`${langStrings.importError(file.name)} — ${error.message}`, 'error', 6000);
+          }
+          setLoadingProgress(((index + 1) / totalFiles) * 100);
+        }
+
+        setLoading(false);
+
+        if (processedConversations > 0) {
+          const langStrings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+          showNotification(langStrings.importSuccess(processedConversations));
+          enterAppMode();
+          rebuildSearchIndex();
+          if (state.search.query.trim()) {
+            applySearch();
+          } else {
+            renderConversationList();
+          }
+          updateSearchCount();
+          if (!state.currentConversationId && state.conversations.length) {
+            renderConversation(state.conversations[0].uid);
+          }
+        } else if (!successfulFiles) {
+          const langStrings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+          showNotification(langStrings.fileSummaryEmpty, 'error', 5000);
+        }
+
+        if (hadErrors) {
+          showNotification(langStrings.importPartial, 'error', 6000);
+        }
+      }
+
+      function enterAppMode() {
+        if (elements.uploadScreen && !elements.uploadScreen.hidden) {
+          elements.uploadScreen.hidden = true;
+        }
+        elements.appContainer.hidden = false;
+      }
+
+      function addConversationsToState(conversations, fileId, fileName, providerCounts) {
+        const fileRecord = {
+          id: fileId,
+          name: fileName,
+          providerCounts,
+          conversationIds: []
+        };
+
+        conversations.forEach((conversation) => {
+          if (!conversation.uid) {
+            return;
+          }
+          if (state.conversationMap.has(conversation.uid)) {
+            return;
+          }
+          conversation.sourceFileId = fileId;
+          conversation.fileName = fileName;
+          state.conversations.push(conversation);
+          state.conversationMap.set(conversation.uid, conversation);
+          fileRecord.conversationIds.push(conversation.uid);
+        });
+
+        state.files.set(fileId, fileRecord);
+        sortConversations();
+        renderFileSummary();
+      }
+
+      function sortConversations() {
+        state.conversations.sort((a, b) => {
+          const timeA = a.sortTimestamp;
+          const timeB = b.sortTimestamp;
+          if (timeA === timeB) {
+            return a.title.localeCompare(b.title);
+          }
+          if (state.order === 'desc') {
+            return timeB - timeA;
+          }
+          return timeA - timeB;
+        });
+      }
+
+      function renderFileSummary() {
+        const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+        elements.fileSummary.innerHTML = '';
+        if (state.files.size === 0) {
+          const li = document.createElement('li');
+          li.textContent = strings.fileSummaryEmpty;
+          elements.fileSummary.appendChild(li);
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        state.files.forEach((file) => {
+          const li = document.createElement('li');
+          li.className = 'file-chip';
+          const descriptor = strings.loadedFileLabel(
+            file.name,
+            file.conversationIds.length,
+            file.providerCounts
+          );
+          const label = document.createElement('span');
+          label.textContent = descriptor;
+          li.appendChild(label);
+          const removeButton = document.createElement('button');
+          removeButton.className = 'remove-file';
+          removeButton.type = 'button';
+          removeButton.title = strings.removeFile;
+          removeButton.setAttribute('aria-label', `${strings.removeFile}: ${file.name}`);
+          removeButton.innerHTML = '<i class="fas fa-xmark"></i>';
+          removeButton.addEventListener('click', () => {
+            removeFileFromState(file.id);
+          });
+          li.appendChild(removeButton);
+          fragment.appendChild(li);
+        });
+        elements.fileSummary.appendChild(fragment);
+      }
+
+      function removeFileFromState(fileId) {
+        const file = state.files.get(fileId);
+        if (!file) {
+          return;
+        }
+        file.conversationIds.forEach((conversationId) => {
+          state.conversationMap.delete(conversationId);
+          const index = state.conversations.findIndex((conversation) => conversation.uid === conversationId);
+          if (index !== -1) {
+            state.conversations.splice(index, 1);
+          }
+          state.selectedIds.delete(conversationId);
+          state.scrollPositions.delete(conversationId);
+          if (state.currentConversationId === conversationId) {
+            state.currentConversationId = null;
+          }
+        });
+        state.files.delete(fileId);
+        sortConversations();
+        renderFileSummary();
+        updateSelectionUI();
+        rebuildSearchIndex();
+        if (state.search.query.trim()) {
+          applySearch();
+        } else {
+          renderConversationList();
+        }
+        if (!state.currentConversationId && state.conversations.length) {
+          renderConversation(state.conversations[0].uid);
+        } else if (!state.conversations.length) {
+          elements.conversationContent.innerHTML = '';
+          elements.conversationContent.appendChild(elements.emptyState);
+          elements.providerBadge.textContent = '';
+          elements.conversationTitle.textContent = (TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en).selectConversation;
+          elements.providerLink.disabled = true;
+          elements.exportCurrent.disabled = true;
+        }
+      }
+
+      function renderConversationList(results) {
+        const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+        elements.conversationList.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        const list = Array.isArray(results) ? results : state.conversations;
+        const searchTerms = getActiveSearchTerms();
+
+        list.forEach((conversation) => {
+          const card = buildConversationCard(conversation, strings, searchTerms);
+          fragment.appendChild(card);
+        });
+
+        elements.conversationList.appendChild(fragment);
+        unlockTimelineSectionHeight();
+        updateSearchCount(list.length, state.conversations.length);
+      }
+
+      function unlockTimelineSectionHeight() {
+        const timelineBody = elements.conversationList?.closest('.section-body');
+        if (!timelineBody) {
+          return;
+        }
+        const timelineSection = timelineBody.closest('.sidebar-section');
+        if (timelineSection && timelineSection.classList.contains('collapsed')) {
+          return;
+        }
+        timelineBody.style.removeProperty('max-height');
+        timelineBody.style.opacity = '1';
+      }
+
+      function buildConversationCard(conversation, strings, searchTerms = []) {
+        const card = document.createElement('article');
+        card.className = 'conversation-card';
+        card.setAttribute('role', 'listitem');
+        card.dataset.conversationId = conversation.uid;
+        card.setAttribute('aria-selected', conversation.uid === state.currentConversationId ? 'true' : 'false');
+
+        const selectionBox = document.createElement('div');
+        selectionBox.className = 'selection-box';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = state.selectedIds.has(conversation.uid);
+        checkbox.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggleSelection(conversation.uid, checkbox.checked);
+        });
+        selectionBox.appendChild(checkbox);
+        card.appendChild(selectionBox);
+
+        const header = document.createElement('header');
+        const title = document.createElement('div');
+        title.className = 'title';
+        title.textContent = conversation.title;
+        if (searchTerms.length) {
+          highlightElement(title, searchTerms);
+        }
+        header.appendChild(title);
+        card.appendChild(header);
+
+        const timestamp = document.createElement('time');
+        timestamp.className = 'timestamp';
+        timestamp.textContent = formatListTimestamp(conversation.sortTimestamp);
+        card.appendChild(timestamp);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const providerPill = document.createElement('span');
+        providerPill.className = `provider-pill ${conversation.provider}`;
+
+        const providerIcons = {
+          chatgpt: `<svg viewBox="0 0 2406 2406" xmlns="http://www.w3.org/2000/svg"><path d="M1 578.4C1 259.5 259.5 1 578.4 1h1249.1c319 0 577.5 258.5 577.5 577.4V2406H578.4C259.5 2406 1 2147.5 1 1828.6V578.4z" fill="#74aa9c"/><path id="a" d="M1107.3 299.1c-197.999 0-373.9 127.3-435.2 315.3L650 743.5v427.9c0 21.4 11 40.4 29.4 51.4l344.5 198.515V833.3h.1v-27.9L1372.7 604c33.715-19.52 70.44-32.857 108.47-39.828L1447.6 450.3C1361 353.5 1237.1 298.5 1107.3 299.1zm0 117.5-.6.6c79.699 0 156.3 27.5 217.6 78.4-2.5 1.2-7.4 4.3-11 6.1L952.8 709.3c-18.4 10.4-29.4 30-29.4 51.4V1248l-155.1-89.4V755.8c-.1-187.099 151.601-338.9 339-339.2z" fill="#fff"/><use href="#a" transform="rotate(60 1203 1203)"/><use href="#a" transform="rotate(120 1203 1203)"/><use href="#a" transform="rotate(180 1203 1203)"/><use href="#a" transform="rotate(240 1203 1203)"/><use href="#a" transform="rotate(300 1203 1203)"/></svg>`,
+          claude: `<svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path fill="#d97757" d="M 233.959793 800.214905 L 468.644287 668.536987 L 472.590637 657.100647 L 468.644287 650.738403 L 457.208069 650.738403 L 417.986633 648.322144 L 283.892639 644.69812 L 167.597321 639.865845 L 54.926208 633.825623 L 26.577238 627.785339 L 3.3e-05 592.751709 L 2.73832 575.27533 L 26.577238 559.248352 L 60.724873 562.228149 L 136.187973 567.382629 L 249.422867 575.194763 L 331.570496 580.026978 L 453.261841 592.671082 L 472.590637 592.671082 L 475.328857 584.859009 L 468.724915 580.026978 L 463.570557 575.194763 L 346.389313 495.785217 L 219.543671 411.865906 L 153.100723 363.543762 L 117.181267 339.060425 L 99.060455 316.107361 L 91.248367 266.01355 L 123.865784 230.093994 L 167.677887 233.073853 L 178.872513 236.053772 L 223.248367 270.201477 L 318.040283 343.570496 L 441.825592 434.738342 L 459.946411 449.798706 L 467.194672 444.64447 L 468.080597 441.020203 L 459.946411 427.409485 L 392.617493 305.718323 L 320.778564 181.932983 L 288.80542 130.630859 L 280.348999 99.865845 C 277.369171 87.221436 275.194641 76.590698 275.194641 63.624268 L 312.322174 13.20813 L 332.8591 6.604126 L 382.389313 13.20813 L 403.248352 31.328979 L 434.013519 101.71814 L 483.865753 212.537048 L 561.181274 363.221497 L 583.812134 407.919434 L 595.892639 449.315491 L 600.40271 461.959839 L 608.214783 461.959839 L 608.214783 454.711609 L 614.577271 369.825623 L 626.335632 265.61084 L 637.771851 131.516846 L 641.718201 93.745117 L 660.402832 48.483276 L 697.530334 24.000122 L 726.52356 37.852417 L 750.362549 72 L 747.060486 94.067139 L 732.886047 186.201416 L 705.100708 330.52356 L 686.979919 427.167847 L 697.530334 427.167847 L 709.61084 415.087341 L 758.496704 350.174561 L 840.644348 247.490051 L 876.885925 206.738342 L 919.167847 161.71814 L 946.308838 140.29541 L 997.61084 140.29541 L 1035.38269 196.429626 L 1018.469849 254.416199 L 965.637634 321.422852 L 921.825562 378.201538 L 859.006714 462.765259 L 819.785278 530.41626 L 823.409424 535.812073 L 832.75177 534.92627 L 974.657776 504.724915 L 1051.328979 490.872559 L 1142.818848 475.167786 L 1184.214844 494.496582 L 1188.724854 514.147644 L 1172.456421 554.335693 L 1074.604126 578.496765 L 959.838989 601.449829 L 788.939636 641.879272 L 786.845764 643.409485 L 789.261841 646.389343 L 866.255127 653.637634 L 899.194702 655.409424 L 979.812134 655.409424 L 1129.932861 666.604187 L 1169.154419 692.537109 L 1192.671265 724.268677 L 1188.724854 748.429688 L 1128.322144 779.194641 L 1046.818848 759.865845 L 856.590759 714.604126 L 791.355774 698.335754 L 782.335693 698.335754 L 782.335693 703.731567 L 836.69812 756.885986 L 936.322205 846.845581 L 1061.073975 962.81897 L 1067.436279 991.490112 L 1051.409424 1014.120911 L 1034.496704 1011.704712 L 924.885986 929.234924 L 882.604126 892.107544 L 786.845764 811.48999 L 780.483276 811.48999 L 780.483276 819.946289 L 802.550415 852.241699 L 919.087341 1027.409424 L 925.127625 1081.127686 L 916.671204 1098.604126 L 886.469849 1109.154419 L 853.288696 1103.114136 L 785.073914 1007.355835 L 714.684631 899.516785 L 657.906067 802.872498 L 650.979858 806.81897 L 617.476624 1167.704834 L 601.771851 1186.147705 L 565.530212 1200 L 535.328857 1177.046997 L 519.302124 1139.919556 L 535.328857 1066.550537 L 554.657776 970.792053 L 570.362488 894.68457 L 584.536926 800.134277 L 592.993347 768.724976 L 592.429626 766.630859 L 585.503479 767.516968 L 514.22821 865.369263 L 405.825531 1011.865906 L 320.053711 1103.677979 L 299.516815 1111.812256 L 263.919525 1093.369263 L 267.221497 1060.429688 L 287.114136 1031.114136 L 405.825531 880.107361 L 477.422913 786.52356 L 523.651062 732.483276 L 523.328918 724.671265 L 520.590698 724.671265 L 205.288605 929.395935 L 149.154434 936.644409 L 124.993355 914.01355 L 127.973183 876.885986 L 139.409409 864.80542 L 234.201385 799.570435 L 233.879227 799.8927 Z"/></svg>`
+        };
+
+        providerPill.innerHTML = `
+          ${providerIcons[conversation.provider] || ''}
+          <span>${providerLabels[conversation.provider]}</span>
+        `;
+        meta.appendChild(providerPill);
+
+        const count = document.createElement('span');
+        const messageLabel = typeof strings.messageCount === 'function'
+          ? strings.messageCount(conversation.messages.length)
+          : `${conversation.messages.length} messages`;
+        count.textContent = messageLabel;
+        meta.appendChild(count);
+
+        card.appendChild(meta);
+
+        if (conversation.preview) {
+          const preview = document.createElement('p');
+          preview.className = 'preview';
+          preview.textContent = conversation.preview;
+          if (searchTerms.length) {
+            highlightElement(preview, searchTerms);
+          }
+          card.appendChild(preview);
+        }
+
+        return card;
+      }
+
+      function handleConversationListClick(event) {
+        const card = event.target.closest('.conversation-card');
+        if (!card) {
+          return;
+        }
+        const conversationId = card.dataset.conversationId;
+        if (!conversationId) {
+          return;
+        }
+        renderConversation(conversationId);
+      }
+
+      function toggleSelection(conversationId, isSelected) {
+        if (isSelected) {
+          state.selectedIds.add(conversationId);
+        } else {
+          state.selectedIds.delete(conversationId);
+        }
+        updateSelectionUI();
+      }
+
+      function updateSelectionUI() {
+        const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+        const selectedCount = state.selectedIds.size;
+        elements.selectionCount.textContent = strings.selectionCount(selectedCount);
+        const hasSelection = selectedCount > 0;
+        elements.exportSelected.disabled = !hasSelection;
+        elements.clearSelection.disabled = !hasSelection;
+      }
+
+      function renderConversation(conversationId, options = {}) {
+        const { preserveScroll = false } = options;
+        if (state.preferences.rememberScroll && !preserveScroll && state.currentConversationId) {
+          const currentScroll = elements.conversationContent.scrollTop;
+          state.scrollPositions.set(state.currentConversationId, currentScroll);
+        }
+
+        const conversation = state.conversationMap.get(conversationId);
+        if (!conversation) {
+          return;
+        }
+
+        state.currentConversationId = conversationId;
+
+        Array.from(elements.conversationList.children).forEach((node) => {
+          node.setAttribute('aria-selected', node.dataset.conversationId === conversationId ? 'true' : 'false');
+        });
+
+        const activeTerms = getActiveSearchTerms();
+        elements.conversationTitle.textContent = conversation.title;
+        if (activeTerms.length) {
+          highlightElement(elements.conversationTitle, activeTerms);
+        }
+        setProviderBadge(conversation.provider);
+        updateConversationMeta(conversation);
+        renderMessages(conversation, activeTerms);
+
+        const hasLink = Boolean(buildProviderUrl(conversation));
+        elements.providerLink.disabled = !hasLink;
+        elements.exportCurrent.disabled = false;
+
+        if (state.preferences.rememberScroll) {
+          const storedScroll = state.scrollPositions.get(conversationId);
+          if (typeof storedScroll === 'number') {
+            elements.conversationContent.scrollTop = storedScroll;
+          } else {
+            elements.conversationContent.scrollTop = 0;
+          }
+        } else {
+          elements.conversationContent.scrollTop = 0;
+        }
+      }
+
+      function setProviderBadge(provider) {
+        const label = providerLabels[provider] || '';
+        if (!label) {
+          elements.providerBadge.innerHTML = '';
+          return;
+        }
+
+        const icons = {
+          chatgpt: `<svg viewBox="0 0 2406 2406" xmlns="http://www.w3.org/2000/svg"><path d="M1 578.4C1 259.5 259.5 1 578.4 1h1249.1c319 0 577.5 258.5 577.5 577.4V2406H578.4C259.5 2406 1 2147.5 1 1828.6V578.4z" fill="#74aa9c"/><path id="a" d="M1107.3 299.1c-197.999 0-373.9 127.3-435.2 315.3L650 743.5v427.9c0 21.4 11 40.4 29.4 51.4l344.5 198.515V833.3h.1v-27.9L1372.7 604c33.715-19.52 70.44-32.857 108.47-39.828L1447.6 450.3C1361 353.5 1237.1 298.5 1107.3 299.1zm0 117.5-.6.6c79.699 0 156.3 27.5 217.6 78.4-2.5 1.2-7.4 4.3-11 6.1L952.8 709.3c-18.4 10.4-29.4 30-29.4 51.4V1248l-155.1-89.4V755.8c-.1-187.099 151.601-338.9 339-339.2z" fill="#fff"/><use href="#a" transform="rotate(60 1203 1203)"/><use href="#a" transform="rotate(120 1203 1203)"/><use href="#a" transform="rotate(180 1203 1203)"/><use href="#a" transform="rotate(240 1203 1203)"/><use href="#a" transform="rotate(300 1203 1203)"/></svg>`,
+          claude: `<svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path fill="#d97757" d="M 233.959793 800.214905 L 468.644287 668.536987 L 472.590637 657.100647 L 468.644287 650.738403 L 457.208069 650.738403 L 417.986633 648.322144 L 283.892639 644.69812 L 167.597321 639.865845 L 54.926208 633.825623 L 26.577238 627.785339 L 3.3e-05 592.751709 L 2.73832 575.27533 L 26.577238 559.248352 L 60.724873 562.228149 L 136.187973 567.382629 L 249.422867 575.194763 L 331.570496 580.026978 L 453.261841 592.671082 L 472.590637 592.671082 L 475.328857 584.859009 L 468.724915 580.026978 L 463.570557 575.194763 L 346.389313 495.785217 L 219.543671 411.865906 L 153.100723 363.543762 L 117.181267 339.060425 L 99.060455 316.107361 L 91.248367 266.01355 L 123.865784 230.093994 L 167.677887 233.073853 L 178.872513 236.053772 L 223.248367 270.201477 L 318.040283 343.570496 L 441.825592 434.738342 L 459.946411 449.798706 L 467.194672 444.64447 L 468.080597 441.020203 L 459.946411 427.409485 L 392.617493 305.718323 L 320.778564 181.932983 L 288.80542 130.630859 L 280.348999 99.865845 C 277.369171 87.221436 275.194641 76.590698 275.194641 63.624268 L 312.322174 13.20813 L 332.8591 6.604126 L 382.389313 13.20813 L 403.248352 31.328979 L 434.013519 101.71814 L 483.865753 212.537048 L 561.181274 363.221497 L 583.812134 407.919434 L 595.892639 449.315491 L 600.40271 461.959839 L 608.214783 461.959839 L 608.214783 454.711609 L 614.577271 369.825623 L 626.335632 265.61084 L 637.771851 131.516846 L 641.718201 93.745117 L 660.402832 48.483276 L 697.530334 24.000122 L 726.52356 37.852417 L 750.362549 72 L 747.060486 94.067139 L 732.886047 186.201416 L 705.100708 330.52356 L 686.979919 427.167847 L 697.530334 427.167847 L 709.61084 415.087341 L 758.496704 350.174561 L 840.644348 247.490051 L 876.885925 206.738342 L 919.167847 161.71814 L 946.308838 140.29541 L 997.61084 140.29541 L 1035.38269 196.429626 L 1018.469849 254.416199 L 965.637634 321.422852 L 921.825562 378.201538 L 859.006714 462.765259 L 819.785278 530.41626 L 823.409424 535.812073 L 832.75177 534.92627 L 974.657776 504.724915 L 1051.328979 490.872559 L 1142.818848 475.167786 L 1184.214844 494.496582 L 1188.724854 514.147644 L 1172.456421 554.335693 L 1074.604126 578.496765 L 959.838989 601.449829 L 788.939636 641.879272 L 786.845764 643.409485 L 789.261841 646.389343 L 866.255127 653.637634 L 899.194702 655.409424 L 979.812134 655.409424 L 1129.932861 666.604187 L 1169.154419 692.537109 L 1192.671265 724.268677 L 1188.724854 748.429688 L 1128.322144 779.194641 L 1046.818848 759.865845 L 856.590759 714.604126 L 791.355774 698.335754 L 782.335693 698.335754 L 782.335693 703.731567 L 836.69812 756.885986 L 936.322205 846.845581 L 1061.073975 962.81897 L 1067.436279 991.490112 L 1051.409424 1014.120911 L 1034.496704 1011.704712 L 924.885986 929.234924 L 882.604126 892.107544 L 786.845764 811.48999 L 780.483276 811.48999 L 780.483276 819.946289 L 802.550415 852.241699 L 919.087341 1027.409424 L 925.127625 1081.127686 L 916.671204 1098.604126 L 886.469849 1109.154419 L 853.288696 1103.114136 L 785.073914 1007.355835 L 714.684631 899.516785 L 657.906067 802.872498 L 650.979858 806.81897 L 617.476624 1167.704834 L 601.771851 1186.147705 L 565.530212 1200 L 535.328857 1177.046997 L 519.302124 1139.919556 L 535.328857 1066.550537 L 554.657776 970.792053 L 570.362488 894.68457 L 584.536926 800.134277 L 592.993347 768.724976 L 592.429626 766.630859 L 585.503479 767.516968 L 514.22821 865.369263 L 405.825531 1011.865906 L 320.053711 1103.677979 L 299.516815 1111.812256 L 263.919525 1093.369263 L 267.221497 1060.429688 L 287.114136 1031.114136 L 405.825531 880.107361 L 477.422913 786.52356 L 523.651062 732.483276 L 523.328918 724.671265 L 520.590698 724.671265 L 205.288605 929.395935 L 149.154434 936.644409 L 124.993355 914.01355 L 127.973183 876.885986 L 139.409409 864.80542 L 234.201385 799.570435 L 233.879227 799.8927 Z"/></svg>`
+        };
+
+        elements.providerBadge.innerHTML = icons[provider] || '';
+        elements.providerBadge.title = label;
+      }
+
+      function updateConversationMeta(conversation) {
+        const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+        elements.conversationMeta.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+
+        const providerItem = buildMetaItem(strings.metaProvider, providerLabels[conversation.provider], true);
+        fragment.appendChild(providerItem);
+
+        if (conversation.createdAt) {
+          fragment.appendChild(buildMetaItem(strings.metaCreated, formatFullTimestamp(conversation.createdAt)));
+        }
+        if (conversation.updatedAt) {
+          fragment.appendChild(buildMetaItem(strings.metaUpdated, formatFullTimestamp(conversation.updatedAt)));
+        }
+        fragment.appendChild(buildMetaItem(strings.metaMessages, String(conversation.messages.length)));
+
+        if (conversation.provider === PROVIDERS.chatgpt && conversation.metadata?.conversationId) {
+          fragment.appendChild(buildMetaItem(strings.metaConversationId, conversation.metadata.conversationId));
+        }
+
+        if (conversation.provider === PROVIDERS.claude && conversation.metadata?.uuid) {
+          fragment.appendChild(buildMetaItem(strings.metaUuid, conversation.metadata.uuid));
+        }
+
+        if (conversation.fileName) {
+          fragment.appendChild(buildMetaItem(strings.metaSource, conversation.fileName));
+        }
+
+        elements.conversationMeta.appendChild(fragment);
+      }
+
+      function buildMetaItem(label, value, isProvider = false) {
+        const item = document.createElement('span');
+        item.className = 'meta-item';
+        const strong = document.createElement('strong');
+        strong.textContent = label;
+        item.appendChild(strong);
+        const span = document.createElement('span');
+        span.textContent = value;
+        item.appendChild(span);
+        return item;
+      }
+
+      function renderMessages(conversation, searchTerms = []) {
+        elements.conversationContent.innerHTML = '';
+        const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+        const fragment = document.createDocumentFragment();
+
+        conversation.messages.forEach((message) => {
+          const messageNode = document.createElement('article');
+          messageNode.className = `message ${message.role}`;
+
+          const header = document.createElement('div');
+          header.className = 'message-header';
+          const role = document.createElement('span');
+          role.className = 'message-role';
+          role.textContent = formatRoleLabel(message.role);
+          header.appendChild(role);
+
+          if (message.timestamp) {
+            const timestamp = document.createElement('time');
+            timestamp.className = 'message-timestamp';
+            timestamp.dateTime = new Date(message.timestamp).toISOString();
+            timestamp.textContent = formatFullTimestamp(message.timestamp);
+            header.appendChild(timestamp);
+          }
+
+          messageNode.appendChild(header);
+
+          const content = document.createElement('div');
+          content.className = 'message-content';
+          renderMessageContent(content, message);
+          if (searchTerms.length) {
+            highlightElement(content, searchTerms);
+          }
+          messageNode.appendChild(content);
+
+          fragment.appendChild(messageNode);
+        });
+
+        if (!conversation.messages.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.innerHTML = `<i class="fas fa-comment-slash"></i><p>${strings.emptyConversation}</p>`;
+          fragment.appendChild(empty);
+        }
+
+        elements.conversationContent.appendChild(fragment);
+        enhanceCodeBlocks(elements.conversationContent);
+      }
+
+      function renderMessageContent(container, message) {
+        if (!message || !message.textSegments?.length) {
+          container.textContent = message?.text || '';
+          return;
+        }
+
+        const markdownEnabled = state.preferences.markdown;
+        if (!markdownEnabled) {
+          const text = message.textSegments.map((segment) => segment.text).join('\n\n');
+          container.textContent = text;
+          return;
+        }
+
+        const combined = message.textSegments
+          .map((segment) => segment.markdown || segment.text)
+          .join('\n\n');
+
+        const html = marked.parse(combined, { mangle: false, headerIds: false });
+        container.innerHTML = sanitizeHtml(html);
+      }
+
+      function enhanceCodeBlocks(root) {
+        const codeBlocks = root.querySelectorAll('pre > code');
+        codeBlocks.forEach((code) => {
+          const pre = code.parentElement;
+          if (pre.querySelector('.code-copy')) {
+            return;
+          }
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'code-copy';
+          button.textContent = 'Copy';
+          button.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(code.textContent || '');
+              button.classList.add('success');
+              button.textContent = 'Copied';
+              setTimeout(() => {
+                button.classList.remove('success');
+                button.textContent = 'Copy';
+              }, 1400);
+            } catch (error) {
+              showNotification('Unable to copy code block', 'error');
+            }
+          });
+          pre.appendChild(button);
+        });
+      }
+
+      function sanitizeHtml(input) {
+        const template = document.createElement('template');
+        template.innerHTML = input;
+        const blockedTags = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta']);
+
+        const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT, null);
+        const toRemove = [];
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (blockedTags.has(node.tagName.toLowerCase())) {
+            toRemove.push(node);
+            continue;
+          }
+          Array.from(node.attributes).forEach((attr) => {
+            const name = attr.name.toLowerCase();
+            const value = attr.value;
+            if (name.startsWith('on')) {
+              node.removeAttribute(attr.name);
+              return;
+            }
+            if ((name === 'href' || name === 'src') && /^javascript:/i.test(value)) {
+              node.removeAttribute(attr.name);
+            }
+          });
+        }
+        toRemove.forEach((node) => node.remove());
+        return template.innerHTML;
+      }
+
+      function formatRoleLabel(role) {
+        switch (role) {
+          case 'user':
+            return 'User';
+          case 'assistant':
+            return 'Assistant';
+          case 'system':
+            return 'System';
+          case 'tool':
+            return 'Tool';
+          default:
+            return role;
+        }
+      }
+
+      function formatListTimestamp(timestamp) {
+        if (!timestamp) {
+          return '';
+        }
+        const date = new Date(timestamp);
+        return date.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+
+      function formatFullTimestamp(timestamp) {
+        if (!timestamp) {
+          return '';
+        }
+        const date = new Date(timestamp);
+        return date.toLocaleString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      function buildProviderUrl(conversation) {
+        if (conversation.provider === PROVIDERS.chatgpt && conversation.metadata?.conversationId) {
+          return `https://chat.openai.com/c/${conversation.metadata.conversationId}`;
+        }
+        if (conversation.provider === PROVIDERS.claude && conversation.metadata?.uuid) {
+          return `https://claude.ai/chat/${conversation.metadata.uuid}`;
+        }
+        return '';
+      }
+
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.onload = (event) => {
+            resolve(String(event.target.result));
+          };
+          reader.readAsText(file);
+        });
+      }
+
+      function readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.onload = (event) => {
+            resolve(event.target.result);
+          };
+          reader.readAsArrayBuffer(file);
+        });
+      }
+
+      function registerJsonPayload(text, sourceLabel, idPrefix = 'file') {
+        const { conversations, providerCounts, warnings } = parseFileContent(text, sourceLabel);
+        if (!conversations.length) {
+          return { added: 0, warnings };
+        }
+        const fileId = generateId(idPrefix);
+        addConversationsToState(conversations, fileId, sourceLabel, providerCounts);
+        return { added: conversations.length, warnings };
+      }
+
+      async function processZipFile(file) {
+        if (typeof JSZip === 'undefined') {
+          throw new Error('ZIP support unavailable');
+        }
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        let zip;
+        try {
+          zip = await JSZip.loadAsync(arrayBuffer);
+        } catch (error) {
+          throw new Error('Unable to read ZIP contents');
+        }
+
+        const entries = [];
+        zip.forEach((relativePath, entry) => {
+          if (entry.dir) {
+            return;
+          }
+          const lower = relativePath.toLowerCase();
+          if (lower.endsWith('conversations.json')) {
+            entries.push({ relativePath, entry });
+          }
+        });
+
+        if (!entries.length) {
+          return {
+            added: 0,
+            sources: 0,
+            warnings: [`No conversations.json found inside ${file.name}`]
+          };
+        }
+
+        let added = 0;
+        let sources = 0;
+        const warnings = [];
+
+        for (const { relativePath, entry } of entries) {
+          try {
+            const content = await entry.async('string');
+            const label = `${file.name} – ${relativePath}`;
+            const result = registerJsonPayload(content, label, 'zip');
+            added += result.added;
+            if (result.added > 0) {
+              sources += 1;
+            }
+            if (result.warnings.length) {
+              warnings.push(...result.warnings.map((warning) => `${label}: ${warning}`));
+            }
+          } catch (error) {
+            warnings.push(`${file.name} – ${relativePath}: ${error.message}`);
+          }
+        }
+
+        if (!added) {
+          warnings.push(`No conversations parsed from ${file.name}`);
+        }
+
+        return { added, sources, warnings };
+      }
+
+      function parseFileContent(text, fileName) {
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch (error) {
+          throw new Error('Invalid JSON');
+        }
+
+        const conversations = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray(parsed.conversations)
+            ? parsed.conversations
+            : [];
+
+        if (!conversations.length) {
+          return { conversations: [], providerCounts: {}, warnings: [] };
+        }
+
+        const warnings = [];
+        const providerCounts = {};
+        const normalized = [];
+
+        conversations.forEach((conversation, index) => {
+          const provider = detectProvider(conversation);
+          if (!provider) {
+            warnings.push(`Unrecognized conversation format at index ${index}`);
+            return;
+          }
+          let normalizedConversation;
+          if (provider === PROVIDERS.chatgpt) {
+            normalizedConversation = normalizeChatGptConversation(conversation);
+          } else {
+            normalizedConversation = normalizeClaudeConversation(conversation);
+          }
+          if (!normalizedConversation) {
+            return;
+          }
+          normalizedConversation.sourceFileName = fileName;
+          normalized.push(normalizedConversation);
+          providerCounts[providerLabels[provider]] = (providerCounts[providerLabels[provider]] || 0) + 1;
+        });
+
+        return { conversations: normalized, providerCounts, warnings };
+      }
+
+      function detectProvider(conversation) {
+        if (conversation.mapping) {
+          return PROVIDERS.chatgpt;
+        }
+        if (conversation.chat_messages) {
+          return PROVIDERS.claude;
+        }
+        return '';
+      }
+
+      function normalizeChatGptConversation(conversation) {
+        const messages = [];
+        const mapping = conversation.mapping || {};
+        Object.values(mapping).forEach((node) => {
+          const message = node.message;
+          if (!message || !message.content) {
+            return;
+          }
+          const role = message.author?.role || 'assistant';
+          const timestamp = extractChatGptTimestamp(message);
+          const textSegments = flattenChatGptContent(message.content);
+          if (!textSegments.length) {
+            return;
+          }
+          messages.push({
+            id: message.id || generateId('msg'),
+            role,
+            timestamp,
+            textSegments,
+            text: textSegments.map((segment) => segment.text).join('\n\n')
+          });
+        });
+
+        messages.sort((a, b) => {
+          if (!a.timestamp && !b.timestamp) {
+            return 0;
+          }
+          if (!a.timestamp) {
+            return -1;
+          }
+          if (!b.timestamp) {
+            return 1;
+          }
+          return a.timestamp - b.timestamp;
+        });
+
+        const title = conversation.title || conversation.gizmo_title || 'Untitled Chat';
+        const uid = `${PROVIDERS.chatgpt}-${conversation.conversation_id || conversation.id || generateId('chatgpt')}`;
+        const createdAt = coerceTimestamp(conversation.create_time);
+        const updatedAt = coerceTimestamp(conversation.update_time);
+        const preview = buildPreviewFromMessages(messages);
+        const sortTimestamp = updatedAt || createdAt || (messages[0]?.timestamp || Date.now());
+        const combinedText = messages.map((msg) => msg.text || '').join('\n\n');
+
+        return {
+          uid,
+          provider: PROVIDERS.chatgpt,
+          title,
+          createdAt,
+          updatedAt,
+          messages,
+          preview,
+          sortTimestamp,
+          metadata: {
+            conversationId: conversation.conversation_id || conversation.id || null
+          },
+          textForSearch: combinedText,
+          textForSearchLower: combinedText.toLowerCase()
+        };
+      }
+
+      function flattenChatGptContent(content) {
+        const segments = [];
+        const parts = content?.parts || [];
+        parts.forEach((part) => {
+          if (typeof part === 'string') {
+            if (part.trim()) {
+              segments.push({ text: part.trim(), markdown: part.trim() });
+            }
+            return;
+          }
+          if (typeof part !== 'object' || !part) {
+            return;
+          }
+          const type = part.content_type;
+          if (type === 'image_asset_pointer') {
+            const description = `![image](${part.asset_pointer || 'asset'})`;
+            segments.push({ text: `[Image asset: ${part.asset_pointer || 'unknown'}]`, markdown: description });
+            return;
+          }
+          if (type === 'audio_asset_pointer') {
+            segments.push({ text: `[Audio asset: ${part.asset_pointer || 'unknown'}]` });
+            return;
+          }
+          if (type === 'audio_transcription') {
+            if (part.text) {
+              segments.push({ text: part.text, markdown: part.text });
+            }
+            return;
+          }
+          if (type === 'real_time_user_audio_video_asset_pointer') {
+            segments.push({ text: '[Audio/Video asset]' });
+            return;
+          }
+          if (part.text) {
+            const trimmed = part.text.trim();
+            if (trimmed) {
+              segments.push({ text: trimmed, markdown: trimmed });
+            }
+          }
+        });
+        return segments;
+      }
+
+      function extractChatGptTimestamp(message) {
+        if (message.create_time) {
+          return coerceTimestamp(message.create_time);
+        }
+        const metadata = message.metadata || {};
+        if (metadata.timestamp_) {
+          return coerceTimestamp(metadata.timestamp_);
+        }
+        if (message.update_time) {
+          return coerceTimestamp(message.update_time);
+        }
+        return null;
+      }
+
+      function coerceTimestamp(value) {
+        if (!value) {
+          return null;
+        }
+        if (typeof value === 'number') {
+          if (value > 1e12) {
+            return value;
+          }
+          return Math.round(value * 1000);
+        }
+        const parsed = Date.parse(value);
+        if (Number.isNaN(parsed)) {
+          return null;
+        }
+        return parsed;
+      }
+
+      function buildPreviewFromMessages(messages) {
+        if (!messages || !messages.length) {
+          return '';
+        }
+        const firstAssistant = messages.find((msg) => msg.role === 'assistant') || messages[0];
+        const text = firstAssistant.text || '';
+        return text.length > 180 ? `${text.slice(0, 177)}…` : text;
+      }
+
+      function normalizeClaudeConversation(conversation) {
+        const messages = [];
+        const chatMessages = conversation.chat_messages || [];
+        chatMessages.forEach((entry) => {
+          const role = mapClaudeRole(entry.sender);
+          const timestamp = entry.created_at ? coerceTimestamp(entry.created_at) : null;
+          const textSegments = flattenClaudeContent(entry);
+          if (!textSegments.length) {
+            return;
+          }
+          messages.push({
+            id: entry.uuid || generateId('msg'),
+            role,
+            timestamp,
+            textSegments,
+            text: textSegments.map((segment) => segment.text).join('\n\n')
+          });
+        });
+
+        messages.sort((a, b) => {
+          if (!a.timestamp && !b.timestamp) {
+            return 0;
+          }
+          if (!a.timestamp) {
+            return -1;
+          }
+          if (!b.timestamp) {
+            return 1;
+          }
+          return a.timestamp - b.timestamp;
+        });
+
+        const title = conversation.name || 'Untitled Chat';
+        const uid = `${PROVIDERS.claude}-${conversation.uuid || generateId('claude')}`;
+        const createdAt = conversation.created_at ? coerceTimestamp(conversation.created_at) : null;
+        const updatedAt = conversation.updated_at ? coerceTimestamp(conversation.updated_at) : null;
+        const preview = buildPreviewFromMessages(messages);
+        const sortTimestamp = updatedAt || createdAt || (messages[0]?.timestamp || Date.now());
+        const combinedText = messages.map((msg) => msg.text || '').join('\n\n');
+
+        return {
+          uid,
+          provider: PROVIDERS.claude,
+          title,
+          createdAt,
+          updatedAt,
+          messages,
+          preview,
+          sortTimestamp,
+          metadata: {
+            uuid: conversation.uuid || null
+          },
+          textForSearch: combinedText,
+          textForSearchLower: combinedText.toLowerCase()
+        };
+      }
+
+      function mapClaudeRole(sender) {
+        if (sender === 'human') {
+          return 'user';
+        }
+        if (sender === 'assistant') {
+          return 'assistant';
+        }
+        if (!sender) {
+          return 'assistant';
+        }
+        return sender;
+      }
+
+      function flattenClaudeContent(entry) {
+        const segments = [];
+        const content = Array.isArray(entry.content) ? entry.content : [];
+        content.forEach((part) => {
+          if (!part || typeof part !== 'object') {
+            return;
+          }
+          const type = part.type;
+          if (type === 'text' && part.text) {
+            const text = part.text.trim();
+            if (text) {
+              segments.push({ text, markdown: text });
+            }
+          } else if (type === 'tool_use') {
+            const toolName = part.name || 'unknown';
+            const toolInput = JSON.stringify(part.input ?? {}, null, 2);
+            const summary = `Tool used: ${toolName}\nInput: ${toolInput}`;
+            const markdown = [
+              `**Tool used:** ${toolName}`,
+              '',
+              '```json',
+              toolInput,
+              '```'
+            ].join('\n');
+            segments.push({ text: summary, markdown });
+            const displaySegments = buildSegmentsFromClaudeDisplayContent(part.display_content);
+            displaySegments.forEach((segment) => {
+              if (segment.text) {
+                segments.push({
+                  text: segment.text,
+                  markdown: segment.markdown || segment.text
+                });
+              }
+            });
+          } else if (type === 'tool_result') {
+            const textContent = extractTextFromClaudeToolResult(part);
+            if (textContent) {
+              segments.push({ text: textContent, markdown: textContent });
+            }
+            const displaySegments = buildSegmentsFromClaudeDisplayContent(part.display_content);
+            displaySegments.forEach((segment) => {
+              if (segment.text) {
+                segments.push({
+                  text: segment.text,
+                  markdown: segment.markdown || segment.text
+                });
+              }
+            });
+          } else if (type === 'thinking' && part.text) {
+            const thinkingText = part.text.trim();
+            if (thinkingText) {
+              segments.push({ text: `[Thinking] ${thinkingText}`, markdown: `> ${thinkingText}` });
+            }
+          } else if (type === 'voice_note' && part.audio) {
+            segments.push({ text: '[Voice note attachment]' });
+          } else {
+            const displaySegments = buildSegmentsFromClaudeDisplayContent(part.display_content);
+            displaySegments.forEach((segment) => {
+              if (segment.text) {
+                segments.push({
+                  text: segment.text,
+                  markdown: segment.markdown || segment.text
+                });
+              }
+            });
+          }
+        });
+
+        if (!segments.length && entry.text && entry.text.trim()) {
+          segments.push({ text: entry.text.trim(), markdown: entry.text.trim() });
+        }
+
+        return segments;
+      }
+
+      function extractTextFromClaudeToolResult(part) {
+        if (Array.isArray(part.content)) {
+          return part.content
+            .map((item) => item.text)
+            .filter(Boolean)
+            .join('\n');
+        }
+        if (part.text) {
+          return part.text;
+        }
+        return '';
+      }
+
+      function buildSegmentsFromClaudeDisplayContent(displayContent) {
+        const segments = [];
+        if (!displayContent) {
+          return segments;
+        }
+        const blocks = Array.isArray(displayContent) ? displayContent : [displayContent];
+        blocks.forEach((block) => {
+          if (!block) {
+            return;
+          }
+          if (typeof block === 'string') {
+            const text = block.trim();
+            if (text) {
+              segments.push({ text, markdown: text });
+            }
+            return;
+          }
+          if (typeof block !== 'object') {
+            const text = String(block);
+            if (text) {
+              segments.push({ text, markdown: text });
+            }
+            return;
+          }
+          switch (block.type) {
+            case 'json_block':
+              segments.push(...buildSegmentsFromClaudeJsonBlock(block));
+              break;
+            case 'text': {
+              const text = typeof block.text === 'string' ? block.text.trim() : '';
+              if (text) {
+                segments.push({ text, markdown: text });
+              }
+              break;
+            }
+            case 'table':
+              segments.push(...buildSegmentsFromClaudeTable(block));
+              break;
+            case 'rich_link':
+              segments.push(...buildSegmentsFromClaudeRichLink(block));
+              break;
+            case 'rich_content': {
+              const items = Array.isArray(block.content) ? block.content : [];
+              items.forEach((item) => {
+                if (item && typeof item === 'object') {
+                  segments.push(...buildSegmentsFromClaudeRichLink({ link: item }));
+                }
+              });
+              break;
+            }
+            default: {
+              const fallback = JSON.stringify(block, null, 2);
+              segments.push({ text: fallback, markdown: formatCodeBlock(fallback, 'json') });
+            }
+          }
+        });
+        return segments;
+      }
+
+      function buildSegmentsFromClaudeJsonBlock(block) {
+        const segments = [];
+        if (!block || (typeof block !== 'object' && typeof block !== 'string')) {
+          return segments;
+        }
+        const raw = typeof block === 'string' ? block : block.json_block;
+        const languageHint = typeof block === 'object' && typeof block.language === 'string' ? block.language.trim() : '';
+        if (!raw) {
+          return segments;
+        }
+        let parsed;
+        if (typeof raw === 'string') {
+          try {
+            parsed = JSON.parse(raw);
+          } catch (error) {
+            segments.push({ text: raw, markdown: formatCodeBlock(raw, languageHint || 'json') });
+            return segments;
+          }
+        } else {
+          parsed = raw;
+        }
+
+        if (typeof parsed === 'string') {
+          segments.push({ text: parsed, markdown: formatCodeBlock(parsed, languageHint || 'plaintext') });
+          return segments;
+        }
+
+        if (!parsed || typeof parsed !== 'object') {
+          return segments;
+        }
+
+        const parsedLanguage = typeof parsed.language === 'string' ? parsed.language.trim() : '';
+        const language = parsedLanguage || languageHint || 'plaintext';
+
+        if (typeof parsed.code === 'string' && parsed.code.length) {
+          segments.push({ text: parsed.code, markdown: formatCodeBlock(parsed.code, language) });
+        }
+
+        if (typeof parsed.stdout === 'string' && parsed.stdout.trim()) {
+          const stdoutText = `STDOUT:\n${parsed.stdout}`;
+          const stdoutMarkdown = ['**STDOUT:**', formatCodeBlock(parsed.stdout, language)].join('\n');
+          segments.push({ text: stdoutText, markdown: stdoutMarkdown });
+        }
+
+        if (typeof parsed.stderr === 'string' && parsed.stderr.trim()) {
+          const stderrText = `STDERR:\n${parsed.stderr}`;
+          const stderrMarkdown = ['**STDERR:**', formatCodeBlock(parsed.stderr, language)].join('\n');
+          segments.push({ text: stderrText, markdown: stderrMarkdown });
+        }
+
+        if (Object.prototype.hasOwnProperty.call(parsed, 'returncode')) {
+          const returnText = `Return code: ${parsed.returncode}`;
+          segments.push({ text: returnText, markdown: `**Return code:** ${parsed.returncode}` });
+        }
+
+        const extraKeys = Object.keys(parsed).filter((key) => !['code', 'language', 'stdout', 'stderr', 'returncode'].includes(key));
+        if (extraKeys.length) {
+          const extra = {};
+          extraKeys.forEach((key) => {
+            extra[key] = parsed[key];
+          });
+          const formatted = JSON.stringify(extra, null, 2);
+          segments.push({ text: formatted, markdown: formatCodeBlock(formatted, 'json') });
+        }
+
+        if (!segments.length) {
+          const fallback = JSON.stringify(parsed, null, 2);
+          segments.push({ text: fallback, markdown: formatCodeBlock(fallback, 'json') });
+        }
+
+        return segments;
+      }
+
+      function buildSegmentsFromClaudeTable(block) {
+        const segments = [];
+        if (!block || typeof block !== 'object') {
+          return segments;
+        }
+        const rows = Array.isArray(block.table) ? block.table.filter((row) => Array.isArray(row) && row.length) : [];
+        if (!rows.length) {
+          return segments;
+        }
+        const normalized = rows.map((row) => row.map((cell) => {
+          if (cell === null || cell === undefined) {
+            return '';
+          }
+          return String(cell).replace(/\r?\n/g, ' ').trim();
+        }));
+        const header = normalized[0];
+        if (!header.length) {
+          const fallback = JSON.stringify(rows, null, 2);
+          segments.push({ text: fallback, markdown: formatCodeBlock(fallback, 'json') });
+          return segments;
+        }
+        const divider = header.map(() => '---');
+        const body = normalized.slice(1);
+        let markdown = `| ${header.join(' | ')} |\n| ${divider.join(' | ')} |`;
+        if (body.length) {
+          markdown += '\n' + body.map((row) => `| ${row.join(' | ')} |`).join('\n');
+        }
+        const text = normalized.map((row) => row.join(' • ')).join('\n');
+        segments.push({ text, markdown });
+        return segments;
+      }
+
+      function buildSegmentsFromClaudeRichLink(block) {
+        const segments = [];
+        if (!block || typeof block !== 'object') {
+          return segments;
+        }
+        const link = block.link && typeof block.link === 'object' ? block.link : block;
+        const url = typeof link.url === 'string' ? link.url : '';
+        const title = typeof link.title === 'string' && link.title.trim() ? link.title.trim() : (url || 'Link');
+        const subtitles = Array.isArray(link.subtitles) ? link.subtitles.filter(Boolean) : [];
+        const subtitleText = subtitles.length ? subtitles.join(' · ') : '';
+        const source = typeof link.source === 'string' && link.source.trim() ? link.source.trim() : '';
+
+        const markdownParts = [];
+        if (url) {
+          markdownParts.push(`[${title}](${url})`);
+        } else {
+          markdownParts.push(title);
+        }
+        if (subtitleText) {
+          markdownParts.push(`_${subtitleText}_`);
+        }
+        if (source) {
+          markdownParts.push(`Source: ${source}`);
+        }
+        const markdown = markdownParts.join('  \n');
+
+        const textParts = [];
+        textParts.push(title);
+        if (subtitleText) {
+          textParts.push(subtitleText);
+        }
+        if (source) {
+          textParts.push(source);
+        }
+        if (url) {
+          textParts.push(url);
+        }
+        const text = textParts.filter(Boolean).join(' — ');
+
+        segments.push({ text: text || title, markdown: markdown || title });
+        return segments;
+      }
+
+      function formatCodeBlock(code, language) {
+        const lang = typeof language === 'string' && language.trim() ? language.trim() : '';
+        const value = typeof code === 'string' ? code : String(code ?? '');
+        return '```' + lang + '\n' + value + '\n```';
+      }
+
+      function updateSearchCount(visible = state.conversations.length, total = state.conversations.length) {
+        const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+        elements.searchCount.textContent = strings.searchCount(visible, total);
+      }
+
+      function applySearch() {
+        if (!state.fuse) {
+          rebuildSearchIndex();
+        }
+
+        const query = state.search.query.trim();
+        const normalizedQuery = query.toLowerCase();
+        if (!query) {
+          state.search.results = null;
+          renderConversationList();
+          elements.clearSearch.hidden = true;
+          return;
+        }
+        elements.clearSearch.hidden = false;
+
+        const fuseOptions = [];
+        if (state.search.scopeTitles) {
+          fuseOptions.push('title');
+        }
+        if (state.search.scopeMessages) {
+          fuseOptions.push('textForSearch');
+        }
+        if (!fuseOptions.length) {
+          renderConversationList([]);
+          updateSearchCount(0, state.conversations.length);
+          return;
+        }
+
+        if (state.search.exact) {
+          const results = state.conversations.filter((conversation) => {
+            return fuseOptions.some((key) => String(conversation[key]).toLowerCase().includes(normalizedQuery));
+          });
+          state.search.results = results;
+          renderConversationList(results);
+          return;
+        }
+
+        const fuseResults = state.fuse ? state.fuse.search(query, { limit: state.conversations.length }) : [];
+        let mapped;
+        if (fuseResults.length) {
+          const matchedIds = new Set(fuseResults.map((result) => result.item.uid));
+          mapped = state.conversations.filter((conversation) => matchedIds.has(conversation.uid));
+        } else {
+          mapped = state.conversations.filter((conversation) => {
+            const titleMatch = state.search.scopeTitles && conversation.title.toLowerCase().includes(normalizedQuery);
+            const contentMatch = state.search.scopeMessages && conversation.textForSearchLower.includes(normalizedQuery);
+            return titleMatch || contentMatch;
+          });
+        }
+        state.search.results = mapped;
+        renderConversationList(mapped);
+      }
+
+      function rebuildSearchIndex() {
+        const keys = [];
+        if (state.search.scopeTitles) {
+          keys.push({ name: 'title', weight: 0.3 });
+        }
+        if (state.search.scopeMessages) {
+          keys.push({ name: 'textForSearch', weight: 0.7 });
+        }
+        if (!keys.length) {
+          state.fuse = null;
+          return;
+        }
+        state.fuse = new Fuse(state.conversations, {
+          includeScore: true,
+          includeMatches: false,
+          ignoreLocation: true,
+          distance: 250,
+          minMatchCharLength: state.search.exact ? Math.max(1, state.search.query.trim().length) : 2,
+          threshold: state.search.exact ? 0.0 : 0.35,
+          keys
+        });
+      }
+
+      function getActiveSearchTerms() {
+        const query = state.search.query.trim();
+        if (!query) {
+          return [];
+        }
+        if (state.search.exact) {
+          return [query];
+        }
+        const tokens = query.split(/\s+/).filter(Boolean);
+        const unique = Array.from(new Set(tokens.map((token) => token.trim())));
+        return unique.sort((a, b) => b.length - a.length);
+      }
+
+      function setCollapseToggleLabel(toggle, collapsed) {
+        if (!toggle) {
+          return;
+        }
+        const strings = getStrings();
+        const label = collapsed ? strings.expandSection : strings.collapseSection;
+        toggle.setAttribute('aria-label', label);
+        const hiddenSpan = toggle.querySelector('.visually-hidden');
+        if (hiddenSpan) {
+          hiddenSpan.textContent = label;
+        }
+      }
+
+      function updateCollapseToggleLabels() {
+        elements.sidebarSections.forEach((section) => {
+          const toggle = section.querySelector('.collapse-toggle');
+          setCollapseToggleLabel(toggle, section.classList.contains('collapsed'));
+        });
+      }
+
+      function persistCollapsedState() {
+        try {
+          localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(state.preferences.collapsedSections));
+        } catch (error) {
+          // ignore storage issues
+        }
+      }
+
+      function applySectionCollapse(sectionId, collapsed, persist = true) {
+        const section = Array.from(elements.sidebarSections).find((node) => node.dataset.section === sectionId);
+        if (!section) {
+          return;
+        }
+        const toggle = section.querySelector('.collapse-toggle');
+        const body = section.querySelector('.section-body');
+        if (body) {
+          if (!collapsed) {
+            if (persist) {
+              body.style.opacity = '1';
+              body.style.maxHeight = `${body.scrollHeight}px`;
+              const onTransitionEnd = (event) => {
+                if (event.propertyName === 'max-height') {
+                  body.style.maxHeight = 'none';
+                  body.removeEventListener('transitionend', onTransitionEnd);
+                }
+              };
+              body.addEventListener('transitionend', onTransitionEnd);
+            } else {
+              body.style.opacity = '1';
+              body.style.maxHeight = 'none';
+            }
+          } else {
+            if (persist) {
+              if (body.style.maxHeight === '' || body.style.maxHeight === 'none') {
+                body.style.maxHeight = `${body.scrollHeight}px`;
+              }
+              requestAnimationFrame(() => {
+                body.style.maxHeight = '0px';
+                body.style.opacity = '0';
+              });
+            } else {
+              body.style.maxHeight = '0px';
+              body.style.opacity = '0';
+            }
+          }
+        }
+        section.classList.toggle('collapsed', collapsed);
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', String(!collapsed));
+          setCollapseToggleLabel(toggle, collapsed);
+        }
+        state.preferences.collapsedSections[sectionId] = collapsed;
+        if (persist) {
+          persistCollapsedState();
+        }
+      }
+
+      function initializeCollapsibleSections() {
+        elements.sidebarSections.forEach((section) => {
+          const sectionId = section.dataset.section;
+          const toggle = section.querySelector('.collapse-toggle');
+          if (!toggle) {
+            return;
+          }
+          const collapsed = Boolean(state.preferences.collapsedSections[sectionId]);
+          applySectionCollapse(sectionId, collapsed, false);
+          toggle.addEventListener('click', () => {
+            const next = !section.classList.contains('collapsed');
+            applySectionCollapse(sectionId, next);
+          });
+        });
+        updateCollapseToggleLabels();
+      }
+
+      function highlightElement(root, terms) {
+        if (!root || !terms || !terms.length) {
+          return;
+        }
+        const forbidden = new Set(['CODE', 'PRE', 'SCRIPT', 'STYLE', 'MARK']);
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        const targets = [];
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (!node || !node.nodeValue || !node.nodeValue.trim()) {
+            continue;
+          }
+          const parent = node.parentNode;
+          if (!parent || forbidden.has(parent.nodeName)) {
+            continue;
+          }
+          targets.push(node);
+        }
+
+        const escapedTerms = terms.map((term) => escapeRegExp(term)).filter(Boolean);
+        if (!escapedTerms.length) {
+          return;
+        }
+
+        targets.forEach((textNode) => {
+          let fragments = [textNode.nodeValue];
+          let replaced = false;
+
+          escapedTerms.forEach((pattern) => {
+            const regex = new RegExp(`(${pattern})`, 'gi');
+            const nextFragments = [];
+            fragments.forEach((fragment) => {
+              if (typeof fragment !== 'string') {
+                nextFragments.push(fragment);
+                return;
+              }
+              let lastIndex = 0;
+              let match;
+              while ((match = regex.exec(fragment)) !== null) {
+                if (match.index > lastIndex) {
+                  nextFragments.push(fragment.slice(lastIndex, match.index));
+                }
+                const mark = document.createElement('mark');
+                mark.className = 'highlight';
+                mark.textContent = match[0];
+                nextFragments.push(mark);
+                lastIndex = match.index + match[0].length;
+                replaced = true;
+              }
+              if (lastIndex < fragment.length) {
+                nextFragments.push(fragment.slice(lastIndex));
+              }
+            });
+            fragments = nextFragments;
+          });
+
+          if (!replaced) {
+            return;
+          }
+
+          const wrapper = document.createDocumentFragment();
+          fragments.forEach((fragment) => {
+            if (typeof fragment === 'string') {
+              wrapper.appendChild(document.createTextNode(fragment));
+            } else {
+              wrapper.appendChild(fragment);
+            }
+          });
+          textNode.replaceWith(wrapper);
+        });
+      }
+
+      function escapeRegExp(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+
+      function exportConversations(conversations, { mode, prefix }) {
+        const strings = TRANSLATIONS[state.preferences.language] || TRANSLATIONS.en;
+        const safePrefix = prefix ? prefix.replace(/[^a-z0-9-_]/gi, '').trim() : '';
+        if (mode === 'separate') {
+          conversations.forEach((conversation) => {
+            const content = buildMarkdownForConversation(conversation);
+            const fileNameParts = [];
+            if (safePrefix) {
+              fileNameParts.push(safePrefix);
+            }
+            fileNameParts.push(slugify(conversation.title));
+            const fileName = `${fileNameParts.join('') || 'conversation'}.md`;
+            triggerDownload(fileName, content);
+          });
+          showNotification(strings.exportSuccess);
+          return;
+        }
+
+        const chunks = conversations.map((conversation) => buildMarkdownForConversation(conversation));
+        const combined = chunks.join('\n\n---\n\n');
+        const stamp = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+        const nameParts = [safePrefix || 'combined', stamp];
+        triggerDownload(`${nameParts.join('-')}.md`, combined);
+        showNotification(strings.exportSuccess);
+      }
+
+      function buildMarkdownForConversation(conversation) {
+        const provider = providerLabels[conversation.provider];
+        const created = formatFullTimestamp(conversation.createdAt);
+        const updated = formatFullTimestamp(conversation.updatedAt);
+        const link = buildProviderUrl(conversation);
+        const headerLines = [
+          `# ${conversation.title}`,
+          '',
+          `- Provider: ${provider}`,
+          created ? `- Created: ${created}` : null,
+          updated ? `- Updated: ${updated}` : null,
+          link ? `- Link: ${link}` : null,
+          '',
+          '---',
+          ''
+        ].filter(Boolean);
+
+        const messageLines = conversation.messages.map((message) => {
+          const timestamp = message.timestamp ? formatFullTimestamp(message.timestamp) : '';
+          const header = `### ${formatRoleLabel(message.role)}${timestamp ? ` — ${timestamp}` : ''}`;
+          const body = message.textSegments
+            .map((segment) => segment.markdown || segment.text)
+            .join('\n\n');
+          return `${header}\n\n${body}`;
+        });
+
+        return [...headerLines, ...messageLines].join('\n\n');
+      }
+
+      function triggerDownload(fileName, content) {
+        const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      }
+
+      function openModal(modal) {
+        if (!modal) {
+          return;
+        }
+        lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+        const focusable = modal.querySelector(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable) {
+          focusable.focus();
+        }
+      }
+
+      function closeModal(modal) {
+        if (!modal) {
+          return;
+        }
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+          lastFocusedElement.focus();
+        }
+      }
+
+      function slugify(value) {
+        return value
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 120) || 'conversation';
+      }
+
+      function debounce(fn, delay = 300) {
+        let timeoutId;
+        return (...args) => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          timeoutId = window.setTimeout(() => {
+            fn.apply(null, args);
+          }, delay);
+        };
+      }
+
+      function generateId(prefix) {
+        const root = prefix || 'id';
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return `${root}-${crypto.randomUUID()}`;
+        }
+        const random = Math.random().toString(16).slice(2, 10);
+        return `${root}-${Date.now().toString(36)}-${random}`;
+      }
+
+      init();
+    })();
+  </script>
+</body>
+
+</html>
