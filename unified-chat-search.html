@@ -336,6 +336,7 @@
 
     /* App layout */
     .app-container {
+      position: relative;
       display: flex;
       align-items: stretch;
       height: 100vh;
@@ -343,6 +344,40 @@
       background: transparent;
       -webkit-backdrop-filter: blur(18px);
       backdrop-filter: blur(18px);
+    }
+
+    .section-rail-icon {
+      display: none;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 20px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .section-rail-icon:hover {
+      background: rgba(16, 163, 127, 0.1);
+      color: var(--text-primary);
+    }
+
+    body.dark-mode .section-rail-icon:hover {
+      background: rgba(16, 163, 127, 0.15);
+    }
+
+    .section-rail-icon svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+      color: inherit;
     }
 
     .sidebar {
@@ -382,6 +417,22 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      width: 100%;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+
+    .brand:hover {
+      opacity: 0.8;
+    }
+
+    .brand:active {
+      opacity: 0.6;
     }
 
     .brand-icon {
@@ -391,8 +442,16 @@
       flex-shrink: 0;
     }
 
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
     .brand-title {
       font-size: 1rem;
+      font-weight: 600;
     }
 
     .brand-subtitle {
@@ -414,8 +473,8 @@
       padding: 16px 18px;
       border: 1px solid rgba(209, 213, 223, 0.45);
       border-radius: 18px;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr;
       gap: 12px;
       background: rgba(255, 255, 255, 0.55);
       -webkit-backdrop-filter: blur(18px);
@@ -813,30 +872,201 @@
       background: rgba(255, 255, 255, 0.92);
       -webkit-backdrop-filter: blur(18px);
       backdrop-filter: blur(18px);
-      border-left: 1px solid rgba(209, 213, 223, 0.4);
+      border-left: none;
       min-width: 0;
-      transition: border-left-color 0.28s ease, padding 0.28s ease;
+      transition: padding 0.28s ease;
     }
 
     body.dark-mode .main-panel {
       background: rgba(17, 24, 39, 0.82);
-      border-left-color: rgba(86, 93, 115, 0.3);
     }
 
     body.sidebar-collapsed .sidebar {
-      flex: 0 0 0;
-      width: 0;
-      min-width: 0;
-      opacity: 0;
-      pointer-events: none;
+      width: 64px;
+      flex: 0 0 64px;
+      min-width: 64px;
+      border-right: 1px solid var(--border-color);
+      box-shadow: none;
     }
 
-    body.sidebar-collapsed .main-panel {
-      border-left-color: transparent;
+    body.sidebar-collapsed .sidebar-header {
+      padding: 20px 8px;
+      border-bottom: 1px solid rgba(209, 213, 223, 0.5);
     }
 
-    body.sidebar-collapsed .conversation-header {
-      padding-left: 24px;
+    body.sidebar-collapsed .brand-text {
+      display: none;
+    }
+
+    body.sidebar-collapsed .sidebar-content {
+      padding: 8px;
+      gap: 8px;
+    }
+
+    body.sidebar-collapsed .sidebar-section {
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body.sidebar-collapsed .section-rail-icon {
+      display: flex;
+    }
+
+    body.sidebar-collapsed .section-top,
+    body.sidebar-collapsed .section-body {
+      display: none;
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .sidebar {
+      width: var(--sidebar-width);
+      flex: 0 0 var(--sidebar-width);
+      min-width: 280px;
+      border-right: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: inset -1px 0 0 rgba(209, 213, 223, 0.4);
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .brand-text {
+      display: flex;
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(209, 213, 223, 0.5);
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .sidebar-content {
+      padding: 16px 16px 24px;
+      gap: 16px;
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .sidebar-section {
+      padding: 16px 18px;
+      border: 1px solid rgba(209, 213, 223, 0.45);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: 0 14px 32px rgba(31, 34, 48, 0.06);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    body.dark-mode.sidebar-collapsed.sidebar-hover-expanded .sidebar-section {
+      background: rgba(17, 24, 39, 0.72);
+      border-color: rgba(86, 93, 115, 0.35);
+      box-shadow: none;
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .section-rail-icon {
+      display: none;
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .section-top {
+      display: flex;
+    }
+
+    body.sidebar-collapsed.sidebar-hover-expanded .section-body {
+      display: grid;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 64px;
+        flex: 0 0 64px;
+        min-width: 64px;
+        border-right: 1px solid var(--border-color);
+        box-shadow: none;
+      }
+
+      .sidebar-header {
+        padding: 12px 8px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .brand-text {
+        display: none;
+      }
+
+      .sidebar-content {
+        padding: 8px;
+        gap: 8px;
+      }
+
+      .sidebar-section {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .section-rail-icon {
+        display: flex;
+      }
+
+      .section-top,
+      .section-body {
+        display: none;
+      }
+
+      body.sidebar-hover-expanded .sidebar {
+        width: var(--sidebar-width);
+        flex: 0 0 var(--sidebar-width);
+        min-width: 280px;
+        border-right: 1px solid rgba(255, 255, 255, 0.35);
+        box-shadow: inset -1px 0 0 rgba(209, 213, 223, 0.4);
+      }
+
+      body.sidebar-hover-expanded .brand-text {
+        display: flex;
+      }
+
+      body.sidebar-hover-expanded .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(209, 213, 223, 0.5);
+      }
+
+      body.sidebar-hover-expanded .sidebar-content {
+        padding: 16px 16px 24px;
+        gap: 16px;
+      }
+
+      body.sidebar-hover-expanded .sidebar-section {
+        padding: 16px 18px;
+        border: 1px solid rgba(209, 213, 223, 0.45);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow: 0 14px 32px rgba(31, 34, 48, 0.06);
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      body.dark-mode.sidebar-hover-expanded .sidebar-section {
+        background: rgba(17, 24, 39, 0.72);
+        border-color: rgba(86, 93, 115, 0.35);
+        box-shadow: none;
+      }
+
+      body.sidebar-hover-expanded .section-rail-icon {
+        display: none;
+      }
+
+      body.sidebar-hover-expanded .section-top {
+        display: flex;
+      }
+
+      body.sidebar-hover-expanded .section-body {
+        display: grid;
+      }
     }
 
     .conversation-header {
@@ -1562,7 +1792,7 @@
   <div id="app-container" class="app-container" hidden>
     <aside class="sidebar" role="navigation" aria-label="Conversation list">
       <header class="sidebar-header">
-        <div class="brand">
+        <button id="brand-toggle" class="brand" type="button" aria-pressed="false" aria-label="Toggle sidebar">
           <span class="brand-icon" aria-hidden="true">
             <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width="42" height="42">
               <defs>
@@ -1581,11 +1811,19 @@
             <span class="brand-title">Unified Chat Search</span>
             <span class="brand-subtitle">ChatGPT &amp; Claude</span>
           </div>
-        </div>
+        </button>
       </header>
 
       <div class="sidebar-content" role="region" aria-label="Filters and timeline">
         <section class="sidebar-section" data-section="files">
+          <button class="section-rail-icon" type="button" aria-label="Files">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3.5 7.75a2 2 0 0 1 2-2h4.5l1.8 2h8.2a1.5 1.5 0 0 1 1.5 1.5v7.5a1.5 1.5 0 0 1-1.5 1.5h-14a1.5 1.5 0 0 1-1.5-1.5z"
+                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M3.5 9.5h17"
+                stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
           <div class="section-top">
             <div class="section-title-group">
               <h2 id="ingest-heading">Loaded Files</h2>
@@ -1604,6 +1842,12 @@
         </section>
 
         <section class="sidebar-section" data-section="search">
+          <button class="section-rail-icon" type="button" aria-label="Search">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <path d="M16.5 16.5 20.5 20.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </button>
           <div class="section-top">
             <div class="section-title-group">
               <h2 id="search-heading">Search</h2>
@@ -1640,6 +1884,15 @@
         </section>
 
         <section class="sidebar-section" data-section="selection">
+          <button class="section-rail-icon" type="button" aria-label="Selection">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5.25 7h8.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M5.25 12h8.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M5.25 17h8.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="m16 11 2 2 3.25-3.25" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </button>
           <div class="section-top">
             <div class="section-title-group">
               <h2 id="selection-heading">Selection</h2>
@@ -1662,6 +1915,15 @@
         </section>
 
         <section class="sidebar-section conversation-list-section" data-section="timeline">
+          <button class="section-rail-icon" type="button" aria-label="Timeline">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                d="M5 6.5h14a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5h-4.5l-3.5 3.5v-3.5H5A1.5 1.5 0 0 1 3.5 14V8A1.5 1.5 0 0 1 5 6.5Z"
+                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M7.5 11h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M7.5 8.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </button>
           <div class="section-top">
             <div class="section-title-group">
               <h2 id="timeline-heading">Timeline</h2>
@@ -1689,9 +1951,6 @@
           <h1 id="conversation-title">Select a conversation</h1>
         </div>
         <div class="conversation-actions">
-          <button id="sidebar-toggle" class="icon-button" type="button" aria-pressed="false" aria-label="Collapse sidebar">
-            <i class="fas fa-chevron-left" aria-hidden="true"></i>
-          </button>
           <label class="switch" title="Toggle dark mode">
             <input id="header-dark-mode-toggle" type="checkbox">
             <span class="switch-slider" aria-hidden="true"></span>
@@ -1931,7 +2190,9 @@
         providerLink: document.getElementById('provider-link'),
         exportCurrent: document.getElementById('export-current'),
         settingsButton: document.getElementById('settings-button'),
-        sidebarToggle: document.getElementById('sidebar-toggle'),
+        brandToggle: document.getElementById('brand-toggle'),
+        sidebar: document.querySelector('.sidebar'),
+        sidebarSections: document.querySelectorAll('.sidebar-section[data-section]'),
         conversationMeta: document.getElementById('conversation-meta'),
         conversationContent: document.getElementById('conversation-content'),
         emptyState: document.getElementById('empty-state'),
@@ -2170,9 +2431,27 @@
           exportConversations([conversation], { mode: 'individual' });
         });
 
-        if (elements.sidebarToggle) {
-          elements.sidebarToggle.addEventListener('click', () => {
+        if (elements.brandToggle) {
+          elements.brandToggle.addEventListener('click', () => {
             applySidebarCollapsed(!state.preferences.sidebarCollapsed, true);
+          });
+        }
+
+        if (elements.sidebar) {
+          let hoverTimeout;
+
+          elements.sidebar.addEventListener('mouseenter', () => {
+            clearTimeout(hoverTimeout);
+            if (state.preferences.sidebarCollapsed) {
+              elements.body.classList.add('sidebar-hover-expanded');
+            }
+          });
+
+          elements.sidebar.addEventListener('mouseleave', () => {
+            clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => {
+              elements.body.classList.remove('sidebar-hover-expanded');
+            }, 100);
           });
         }
 
@@ -2265,8 +2544,11 @@
         elements.languageSelect.value = state.preferences.language;
 
         const storedSidebar = localStorage.getItem(STORAGE_KEYS.sidebarCollapsed);
+        const isMobile = window.innerWidth <= 768;
         if (storedSidebar !== null) {
           state.preferences.sidebarCollapsed = storedSidebar === 'true';
+        } else if (isMobile) {
+          state.preferences.sidebarCollapsed = true;
         }
 
         const storedQuery = localStorage.getItem(STORAGE_KEYS.searchQuery);
@@ -2369,7 +2651,7 @@
         updateCollapseToggleLabels();
         updateSearchCount();
         updateSelectionUI();
-        updateSidebarToggleAppearance();
+        updateBrandToggleAppearance();
       }
 
       function applyAppearance() {
@@ -2400,26 +2682,23 @@
       function applySidebarCollapsed(collapsed, persist = false) {
         state.preferences.sidebarCollapsed = Boolean(collapsed);
         elements.body.classList.toggle('sidebar-collapsed', state.preferences.sidebarCollapsed);
-        updateSidebarToggleAppearance();
+        elements.body.classList.remove('sidebar-hover-expanded');
+        updateBrandToggleAppearance();
         if (persist) {
           persistPreference(STORAGE_KEYS.sidebarCollapsed, state.preferences.sidebarCollapsed);
         }
       }
 
-      function updateSidebarToggleAppearance() {
-        if (!elements.sidebarToggle) {
+      function updateBrandToggleAppearance() {
+        if (!elements.brandToggle) {
           return;
         }
         const strings = getStrings();
         const collapsed = state.preferences.sidebarCollapsed;
         const label = collapsed ? strings.expandSidebar : strings.collapseSidebar;
-        elements.sidebarToggle.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
-        elements.sidebarToggle.setAttribute('aria-label', label);
-        elements.sidebarToggle.title = label;
-        const icon = elements.sidebarToggle.querySelector('i');
-        if (icon) {
-          icon.className = collapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
-        }
+        elements.brandToggle.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        elements.brandToggle.setAttribute('aria-label', label);
+        elements.brandToggle.title = label;
       }
 
       function updateMarkdownToggle() {
