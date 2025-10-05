@@ -1113,6 +1113,178 @@
       background: rgba(31, 172, 136, 0.95);
     }
 
+    .tool-block {
+      border: 1px solid rgba(16, 163, 127, 0.25);
+      background: rgba(16, 163, 127, 0.08);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: grid;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .tool-block[data-tool-variant="result"] {
+      background: rgba(138, 108, 255, 0.08);
+      border-color: rgba(138, 108, 255, 0.25);
+    }
+
+    .tool-block[data-tool-error="true"] {
+      border-color: rgba(214, 69, 80, 0.45);
+      background: rgba(214, 69, 80, 0.08);
+    }
+
+    body.dark-mode .tool-block {
+      background: rgba(16, 163, 127, 0.18);
+      border-color: rgba(16, 163, 127, 0.35);
+    }
+
+    body.dark-mode .tool-block[data-tool-variant="result"] {
+      background: rgba(138, 108, 255, 0.22);
+      border-color: rgba(138, 108, 255, 0.45);
+    }
+
+    body.dark-mode .tool-block[data-tool-error="true"] {
+      background: rgba(214, 69, 80, 0.22);
+      border-color: rgba(214, 69, 80, 0.55);
+    }
+
+    .tool-block-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tool-block-badge {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--text-secondary);
+    }
+
+    body.dark-mode .tool-block-badge {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+
+    .tool-block-title {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .tool-block-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .tool-block-body {
+      display: grid;
+      gap: 12px;
+    }
+
+    .tool-block-section {
+      display: grid;
+      gap: 6px;
+    }
+
+    .tool-block-section-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .tool-block pre {
+      margin: 0;
+    }
+
+    .tool-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .tool-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .tool-table th,
+    .tool-table td {
+      border: 1px solid var(--border-color);
+      padding: 6px 10px;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    body.dark-mode .tool-table th,
+    body.dark-mode .tool-table td {
+      background: rgba(24, 31, 46, 0.6);
+      border-color: rgba(86, 93, 115, 0.35);
+    }
+
+    .tool-link-card {
+      display: grid;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(16, 163, 127, 0.2);
+      background: rgba(16, 163, 127, 0.1);
+    }
+
+    body.dark-mode .tool-link-card {
+      background: rgba(16, 163, 127, 0.18);
+      border-color: rgba(16, 163, 127, 0.35);
+    }
+
+    .tool-link-card a {
+      color: inherit;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .tool-link-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .tool-link-source {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .tool-rich-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .tool-rich-list li {
+      display: grid;
+      gap: 4px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(209, 213, 223, 0.35);
+    }
+
+    body.dark-mode .tool-rich-list li {
+      background: rgba(24, 31, 46, 0.7);
+      border-color: rgba(86, 93, 115, 0.35);
+    }
+
+    .tool-rich-list a {
+      color: inherit;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
     .message-content blockquote {
       margin: 0;
       padding-left: 16px;
@@ -3277,37 +3449,47 @@
               segments.push({ text, markdown: text });
             }
           } else if (type === 'tool_use') {
-            const toolName = part.name || 'unknown';
-            const toolInput = JSON.stringify(part.input ?? {}, null, 2);
-            const summary = `Tool used: ${toolName}\nInput: ${toolInput}`;
-            const markdown = [
-              `**Tool used:** ${toolName}`,
-              '',
-              '```json',
-              toolInput,
-              '```'
-            ].join('\n');
-            segments.push({ text: summary, markdown });
-            const displaySegments = buildSegmentsFromClaudeDisplayContent(part.display_content);
+            const toolName = part.name || 'Tool Call';
+            const integrationName = part.integration_name || part.integration || '';
+            const inputPayload = part.input ?? {};
+            const inputString = typeof inputPayload === 'string'
+              ? inputPayload
+              : JSON.stringify(inputPayload, null, 2);
+            const message = typeof part.message === 'string' ? part.message.trim() : '';
+            const displaySegments = buildSegmentsFromClaudeDisplayContent(part.display_content, {
+              stage: 'call',
+              toolName,
+              integrationName,
+              inputText: inputString,
+              message
+            });
             displaySegments.forEach((segment) => {
-              if (segment.text) {
+              if (segment.text || segment.markdown) {
                 segments.push({
-                  text: segment.text,
-                  markdown: segment.markdown || segment.text
+                  text: segment.text || '',
+                  markdown: segment.markdown || segment.text || ''
                 });
               }
             });
           } else if (type === 'tool_result') {
-            const textContent = extractTextFromClaudeToolResult(part);
-            if (textContent) {
-              segments.push({ text: textContent, markdown: textContent });
+            const toolName = part.name || 'Tool Result';
+            const integrationName = part.integration_name || part.integration || '';
+            const resultText = extractTextFromClaudeToolResult(part);
+            const displaySegments = buildSegmentsFromClaudeDisplayContent(part.display_content, {
+              stage: 'result',
+              toolName,
+              integrationName,
+              resultText,
+              isError: Boolean(part.is_error)
+            });
+            if (!displaySegments.length && resultText) {
+              displaySegments.push({ text: resultText, markdown: resultText });
             }
-            const displaySegments = buildSegmentsFromClaudeDisplayContent(part.display_content);
             displaySegments.forEach((segment) => {
-              if (segment.text) {
+              if (segment.text || segment.markdown) {
                 segments.push({
-                  text: segment.text,
-                  markdown: segment.markdown || segment.text
+                  text: segment.text || '',
+                  markdown: segment.markdown || segment.text || ''
                 });
               }
             });
@@ -3351,12 +3533,75 @@
         return '';
       }
 
-      function buildSegmentsFromClaudeDisplayContent(displayContent) {
-        const segments = [];
-        if (!displayContent) {
-          return segments;
+      function buildSegmentsFromClaudeDisplayContent(displayContent, context = {}) {
+        const stage = context.stage || 'generic';
+        if (stage === 'call' || stage === 'result') {
+          const sections = [];
+          if (stage === 'call') {
+            if (context.inputText && String(context.inputText).trim()) {
+              const inputSection = createCodeSection('Input', context.inputText, 'json');
+              if (inputSection) {
+                sections.push(inputSection);
+              }
+            }
+            if (context.message) {
+              const messageSection = createTextSection('Message', context.message);
+              if (messageSection) {
+                sections.push(messageSection);
+              }
+            }
+          }
+
+          const display = collectDisplaySections(displayContent);
+
+          if (stage === 'result' && context.resultText) {
+            const resultSection = createTextSection(context.isError ? 'Error' : 'Result', context.resultText);
+            if (resultSection) {
+              sections.push(resultSection);
+            }
+          }
+
+          sections.push(...display.sections);
+
+          if (!sections.length) {
+            const fallback = stage === 'call'
+              ? [`Tool call: ${context.toolName || ''}`, context.inputText || ''].filter(Boolean).join('\n')
+              : (context.resultText || `Tool result: ${context.toolName || ''}`);
+            return fallback
+              ? [{ text: fallback, markdown: escapeHtml(fallback) }]
+              : [];
+          }
+
+          const { markdown, plainText } = buildToolBlock({
+            variant: stage,
+            toolName: context.toolName,
+            integrationName: context.integrationName,
+            sections,
+            isError: Boolean(context.isError)
+          });
+          return [{ text: plainText, markdown }];
         }
-        const blocks = Array.isArray(displayContent) ? displayContent : [displayContent];
+
+        const display = collectDisplaySections(displayContent);
+        if (!display.sections.length) {
+          return display.plainText
+            ? [{ text: display.plainText, markdown: escapeHtml(display.plainText) }]
+            : [];
+        }
+
+        const block = buildToolBlock({
+          variant: 'info',
+          toolName: context.title || 'Details',
+          integrationName: context.integrationName,
+          sections: display.sections
+        });
+        return [{ text: display.plainText, markdown: block.markdown }];
+      }
+
+      function collectDisplaySections(displayContent) {
+        const sections = [];
+        const plainParts = [];
+        const blocks = Array.isArray(displayContent) ? displayContent : displayContent ? [displayContent] : [];
         blocks.forEach((block) => {
           if (!block) {
             return;
@@ -3364,105 +3609,161 @@
           if (typeof block === 'string') {
             const text = block.trim();
             if (text) {
-              segments.push({ text, markdown: text });
+              const section = createTextSection('Details', text);
+              if (section) {
+                sections.push(section);
+                plainParts.push(section.plainText);
+              }
             }
             return;
           }
           if (typeof block !== 'object') {
             const text = String(block);
-            if (text) {
-              segments.push({ text, markdown: text });
+            const section = createTextSection('Details', text);
+            if (section) {
+              sections.push(section);
+              plainParts.push(section.plainText);
             }
             return;
           }
           switch (block.type) {
-            case 'json_block':
-              segments.push(...buildSegmentsFromClaudeJsonBlock(block));
+            case 'json_block': {
+              const jsonSections = buildSectionsFromClaudeJsonBlock(block);
+              sections.push(...jsonSections.sections);
+              plainParts.push(...jsonSections.plainParts);
               break;
+            }
             case 'text': {
               const text = typeof block.text === 'string' ? block.text.trim() : '';
               if (text) {
-                segments.push({ text, markdown: text });
+                const section = createTextSection('Details', text);
+                if (section) {
+                  sections.push(section);
+                  plainParts.push(section.plainText);
+                }
               }
               break;
             }
-            case 'table':
-              segments.push(...buildSegmentsFromClaudeTable(block));
+            case 'table': {
+              const section = createTableSection('Table', block.table);
+              if (section) {
+                sections.push(section);
+                plainParts.push(section.plainText);
+              }
               break;
-            case 'rich_link':
-              segments.push(...buildSegmentsFromClaudeRichLink(block));
+            }
+            case 'rich_link': {
+              const section = createLinkSection(block.link || block);
+              if (section) {
+                sections.push(section);
+                plainParts.push(section.plainText);
+              }
               break;
+            }
             case 'rich_content': {
-              const items = Array.isArray(block.content) ? block.content : [];
-              items.forEach((item) => {
-                if (item && typeof item === 'object') {
-                  segments.push(...buildSegmentsFromClaudeRichLink({ link: item }));
-                }
-              });
+              const section = createRichContentSection(block.content);
+              if (section) {
+                sections.push(section);
+                plainParts.push(section.plainText);
+              }
               break;
             }
             default: {
+              if (block.text) {
+                const text = String(block.text).trim();
+                if (text) {
+                  const section = createTextSection('Details', text);
+                  if (section) {
+                    sections.push(section);
+                    plainParts.push(section.plainText);
+                  }
+                  break;
+                }
+              }
               const fallback = JSON.stringify(block, null, 2);
-              segments.push({ text: fallback, markdown: formatCodeBlock(fallback, 'json') });
+              const section = createCodeSection('Details', fallback, 'json');
+              if (section) {
+                sections.push(section);
+                plainParts.push(section.plainText);
+              }
             }
           }
         });
-        return segments;
+        return {
+          sections,
+          plainText: plainParts.filter(Boolean).join('\n').trim()
+        };
       }
 
-      function buildSegmentsFromClaudeJsonBlock(block) {
-        const segments = [];
-        if (!block || (typeof block !== 'object' && typeof block !== 'string')) {
-          return segments;
-        }
+      function buildSectionsFromClaudeJsonBlock(block) {
+        const sections = [];
+        const plainParts = [];
         const raw = typeof block === 'string' ? block : block.json_block;
         const languageHint = typeof block === 'object' && typeof block.language === 'string' ? block.language.trim() : '';
         if (!raw) {
-          return segments;
+          return { sections, plainParts };
         }
         let parsed;
         if (typeof raw === 'string') {
           try {
             parsed = JSON.parse(raw);
           } catch (error) {
-            segments.push({ text: raw, markdown: formatCodeBlock(raw, languageHint || 'json') });
-            return segments;
+            const section = createCodeSection('Details', raw, languageHint || 'json');
+            if (section) {
+              sections.push(section);
+              plainParts.push(section.plainText);
+            }
+            return { sections, plainParts };
           }
         } else {
           parsed = raw;
         }
 
         if (typeof parsed === 'string') {
-          segments.push({ text: parsed, markdown: formatCodeBlock(parsed, languageHint || 'plaintext') });
-          return segments;
+          const section = createCodeSection('Content', parsed, languageHint || 'plaintext');
+          if (section) {
+            sections.push(section);
+            plainParts.push(section.plainText);
+          }
+          return { sections, plainParts };
         }
 
         if (!parsed || typeof parsed !== 'object') {
-          return segments;
+          return { sections, plainParts };
         }
 
-        const parsedLanguage = typeof parsed.language === 'string' ? parsed.language.trim() : '';
-        const language = parsedLanguage || languageHint || 'plaintext';
+        const language = typeof parsed.language === 'string' ? parsed.language.trim() : languageHint || 'plaintext';
 
-        if (typeof parsed.code === 'string' && parsed.code.length) {
-          segments.push({ text: parsed.code, markdown: formatCodeBlock(parsed.code, language) });
+        if (typeof parsed.code === 'string' && parsed.code.trim()) {
+          const section = createCodeSection('Command', parsed.code, language);
+          if (section) {
+            sections.push(section);
+            plainParts.push(section.plainText);
+          }
         }
 
         if (typeof parsed.stdout === 'string' && parsed.stdout.trim()) {
-          const stdoutText = `STDOUT:\n${parsed.stdout}`;
-          const stdoutMarkdown = ['**STDOUT:**', formatCodeBlock(parsed.stdout, language)].join('\n');
-          segments.push({ text: stdoutText, markdown: stdoutMarkdown });
+          const section = createCodeSection('Output', parsed.stdout, language);
+          if (section) {
+            sections.push(section);
+            plainParts.push(section.plainText);
+          }
         }
 
         if (typeof parsed.stderr === 'string' && parsed.stderr.trim()) {
-          const stderrText = `STDERR:\n${parsed.stderr}`;
-          const stderrMarkdown = ['**STDERR:**', formatCodeBlock(parsed.stderr, language)].join('\n');
-          segments.push({ text: stderrText, markdown: stderrMarkdown });
+          const section = createCodeSection('Error Output', parsed.stderr, language);
+          if (section) {
+            sections.push(section);
+            plainParts.push(section.plainText);
+          }
         }
 
         if (Object.prototype.hasOwnProperty.call(parsed, 'returncode')) {
-          const returnText = `Return code: ${parsed.returncode}`;
-          segments.push({ text: returnText, markdown: `**Return code:** ${parsed.returncode}` });
+          const section = createTextSection('Return Code', String(parsed.returncode));
+          if (section) {
+            sections.push(section);
+            plainParts.push(section.plainText);
+          }
         }
 
         const extraKeys = Object.keys(parsed).filter((key) => !['code', 'language', 'stdout', 'stderr', 'returncode'].includes(key));
@@ -3471,97 +3772,249 @@
           extraKeys.forEach((key) => {
             extra[key] = parsed[key];
           });
-          const formatted = JSON.stringify(extra, null, 2);
-          segments.push({ text: formatted, markdown: formatCodeBlock(formatted, 'json') });
-        }
-
-        if (!segments.length) {
-          const fallback = JSON.stringify(parsed, null, 2);
-          segments.push({ text: fallback, markdown: formatCodeBlock(fallback, 'json') });
-        }
-
-        return segments;
-      }
-
-      function buildSegmentsFromClaudeTable(block) {
-        const segments = [];
-        if (!block || typeof block !== 'object') {
-          return segments;
-        }
-        const rows = Array.isArray(block.table) ? block.table.filter((row) => Array.isArray(row) && row.length) : [];
-        if (!rows.length) {
-          return segments;
-        }
-        const normalized = rows.map((row) => row.map((cell) => {
-          if (cell === null || cell === undefined) {
-            return '';
+          const json = JSON.stringify(extra, null, 2);
+          const section = createCodeSection('Details', json, 'json');
+          if (section) {
+            sections.push(section);
+            plainParts.push(section.plainText);
           }
-          return String(cell).replace(/\r?\n/g, ' ').trim();
-        }));
-        const header = normalized[0];
-        if (!header.length) {
-          const fallback = JSON.stringify(rows, null, 2);
-          segments.push({ text: fallback, markdown: formatCodeBlock(fallback, 'json') });
-          return segments;
         }
-        const divider = header.map(() => '---');
-        const body = normalized.slice(1);
-        let markdown = `| ${header.join(' | ')} |\n| ${divider.join(' | ')} |`;
-        if (body.length) {
-          markdown += '\n' + body.map((row) => `| ${row.join(' | ')} |`).join('\n');
+
+        if (!sections.length) {
+          const fallback = JSON.stringify(parsed, null, 2);
+          const section = createCodeSection('Details', fallback, 'json');
+          if (section) {
+            sections.push(section);
+            plainParts.push(section.plainText);
+          }
         }
-        const text = normalized.map((row) => row.join(' • ')).join('\n');
-        segments.push({ text, markdown });
-        return segments;
+
+        return { sections, plainParts };
       }
 
-      function buildSegmentsFromClaudeRichLink(block) {
-        const segments = [];
-        if (!block || typeof block !== 'object') {
-          return segments;
+      function createCodeSection(heading, code, language) {
+        if (code === null || code === undefined) {
+          return null;
         }
-        const link = block.link && typeof block.link === 'object' ? block.link : block;
+        const value = typeof code === 'string' ? code : JSON.stringify(code, null, 2);
+        const trimmed = value.trim();
+        if (!trimmed) {
+          return null;
+        }
+        const languageClass = language && String(language).trim()
+          ? ` class="language-${escapeHtml(String(language).trim())}"`
+          : '';
+        return {
+          heading,
+          contentHtml: `<pre><code${languageClass}>${escapeHtml(trimmed)}</code></pre>`,
+          plainText: trimmed
+        };
+      }
+
+      function createTextSection(heading, text) {
+        if (text === null || text === undefined) {
+          return null;
+        }
+        const value = typeof text === 'string' ? text : String(text);
+        const trimmed = value.trim();
+        if (!trimmed) {
+          return null;
+        }
+        return {
+          heading,
+          contentHtml: `<p>${escapeHtml(trimmed)}</p>`,
+          plainText: trimmed
+        };
+      }
+
+      function createTableSection(heading, tableData) {
+        if (!Array.isArray(tableData) || !tableData.length) {
+          return null;
+        }
+        const rows = tableData.filter((row) => Array.isArray(row) && row.length);
+        if (!rows.length) {
+          return null;
+        }
+        const header = rows[0];
+        const body = rows.slice(1);
+        const headerHtml = header.map((cell) => `<th>${escapeHtml(String(cell ?? ''))}</th>`).join('');
+        const bodyHtml = body
+          .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell ?? ''))}</td>`).join('')}</tr>`)
+          .join('');
+        const tableHtml = `<div class="tool-table-wrapper"><table class="tool-table"><thead><tr>${headerHtml}</tr></thead>${bodyHtml ? `<tbody>${bodyHtml}</tbody>` : ''}</table></div>`;
+        const plainText = rows
+          .map((row) => row.map((cell) => String(cell ?? '').trim()).join(' • '))
+          .join('\n');
+        return {
+          heading,
+          contentHtml: tableHtml,
+          plainText
+        };
+      }
+
+      function createLinkSection(link) {
+        if (!link || typeof link !== 'object') {
+          return null;
+        }
         const url = typeof link.url === 'string' ? link.url : '';
         const title = typeof link.title === 'string' && link.title.trim() ? link.title.trim() : (url || 'Link');
-        const subtitles = Array.isArray(link.subtitles) ? link.subtitles.filter(Boolean) : [];
-        const subtitleText = subtitles.length ? subtitles.join(' · ') : '';
+        const subtitles = Array.isArray(link.subtitles) ? link.subtitles.filter(Boolean).join(' · ') : '';
         const source = typeof link.source === 'string' && link.source.trim() ? link.source.trim() : '';
-
-        const markdownParts = [];
+        const parts = ['<div class="tool-link-card">'];
         if (url) {
-          markdownParts.push(`[${title}](${url})`);
+          parts.push(`<a href="${escapeAttribute(url)}" target="_blank" rel="noopener">${escapeHtml(title)}</a>`);
         } else {
-          markdownParts.push(title);
+          parts.push(`<span>${escapeHtml(title)}</span>`);
         }
-        if (subtitleText) {
-          markdownParts.push(`_${subtitleText}_`);
-        }
-        if (source) {
-          markdownParts.push(`Source: ${source}`);
-        }
-        const markdown = markdownParts.join('  \n');
-
-        const textParts = [];
-        textParts.push(title);
-        if (subtitleText) {
-          textParts.push(subtitleText);
+        if (subtitles) {
+          parts.push(`<div class="tool-link-subtitle">${escapeHtml(subtitles)}</div>`);
         }
         if (source) {
-          textParts.push(source);
+          parts.push(`<div class="tool-link-source">${escapeHtml(source)}</div>`);
+        }
+        parts.push('</div>');
+        const plainParts = [title];
+        if (subtitles) {
+          plainParts.push(subtitles);
+        }
+        if (source) {
+          plainParts.push(source);
         }
         if (url) {
-          textParts.push(url);
+          plainParts.push(url);
         }
-        const text = textParts.filter(Boolean).join(' — ');
-
-        segments.push({ text: text || title, markdown: markdown || title });
-        return segments;
+        return {
+          heading: 'Link',
+          contentHtml: parts.join(''),
+          plainText: plainParts.join(' — ')
+        };
       }
 
-      function formatCodeBlock(code, language) {
-        const lang = typeof language === 'string' && language.trim() ? language.trim() : '';
-        const value = typeof code === 'string' ? code : String(code ?? '');
-        return '```' + lang + '\n' + value + '\n```';
+      function createRichContentSection(content) {
+        const items = Array.isArray(content) ? content.filter((item) => item && typeof item === 'object') : [];
+        if (!items.length) {
+          return null;
+        }
+        const listItems = [];
+        const plainParts = [];
+        items.forEach((item) => {
+          const title = typeof item.title === 'string' ? item.title : (item.url || '');
+          const url = typeof item.url === 'string' ? item.url : '';
+          const subtitles = Array.isArray(item.subtitles) ? item.subtitles.filter(Boolean).join(' · ') : '';
+          const source = typeof item.source === 'string' ? item.source : '';
+          const fragments = [];
+          if (url) {
+            fragments.push(`<a href="${escapeAttribute(url)}" target="_blank" rel="noopener">${escapeHtml(title || url)}</a>`);
+          } else if (title) {
+            fragments.push(`<span>${escapeHtml(title)}</span>`);
+          }
+          if (subtitles) {
+            fragments.push(`<div class="tool-link-subtitle">${escapeHtml(subtitles)}</div>`);
+          }
+          if (source) {
+            fragments.push(`<div class="tool-link-source">${escapeHtml(source)}</div>`);
+          }
+          listItems.push(`<li>${fragments.join('')}</li>`);
+          const plainEntry = [title || url].filter(Boolean);
+          if (subtitles) {
+            plainEntry.push(subtitles);
+          }
+          if (source) {
+            plainEntry.push(source);
+          }
+          if (url) {
+            plainEntry.push(url);
+          }
+          if (plainEntry.length) {
+            plainParts.push(plainEntry.join(' — '));
+          }
+        });
+        if (!listItems.length) {
+          return null;
+        }
+        return {
+          heading: 'Items',
+          contentHtml: `<ul class="tool-rich-list">${listItems.join('')}</ul>`,
+          plainText: plainParts.join('\n')
+        };
+      }
+
+      function buildToolBlock({ variant, toolName, integrationName, sections = [], isError = false }) {
+        const filteredSections = sections.filter(Boolean);
+        const classes = ['tool-block'];
+        const badgeMap = {
+          call: 'Tool Call',
+          result: 'Tool Result',
+          info: 'Info'
+        };
+        const badgeLabel = badgeMap[variant] || 'Info';
+        const dataAttributes = [`data-tool-variant="${escapeHtml(variant)}"`];
+        if (isError) {
+          classes.push('tool-block-error');
+          dataAttributes.push('data-tool-error="true"');
+        }
+
+        const headerParts = [];
+        if (variant !== 'info' || toolName || integrationName) {
+          headerParts.push('<div class="tool-block-header">');
+          headerParts.push(`<span class="tool-block-badge">${escapeHtml(badgeLabel)}</span>`);
+          if (toolName) {
+            headerParts.push(`<span class="tool-block-title">${escapeHtml(toolName)}</span>`);
+          }
+          if (integrationName) {
+            headerParts.push(`<span class="tool-block-subtitle">${escapeHtml(integrationName)}</span>`);
+          }
+          headerParts.push('</div>');
+        }
+
+        const bodyParts = [];
+        const plainParts = [];
+        if (filteredSections.length) {
+          bodyParts.push('<div class="tool-block-body">');
+          filteredSections.forEach((section) => {
+            bodyParts.push('<section class="tool-block-section">');
+            if (section.heading) {
+              bodyParts.push(`<header class="tool-block-section-label">${escapeHtml(section.heading)}</header>`);
+            }
+            bodyParts.push(section.contentHtml);
+            bodyParts.push('</section>');
+            if (section.plainText) {
+              plainParts.push(section.plainText);
+            }
+          });
+          bodyParts.push('</div>');
+        }
+
+        const html = [`<div class="${classes.join(' ')}" ${dataAttributes.join(' ')}>`, ...headerParts, ...bodyParts, '</div>'].join('');
+
+        const summaryParts = [];
+        if (toolName && variant !== 'info') {
+          summaryParts.push(`${badgeLabel}: ${toolName}`);
+        } else if (variant !== 'info') {
+          summaryParts.push(badgeLabel);
+        }
+        if (integrationName) {
+          summaryParts.push(`Integration: ${integrationName}`);
+        }
+        summaryParts.push(...plainParts);
+
+        return {
+          markdown: html,
+          plainText: summaryParts.filter(Boolean).join('\n').trim()
+        };
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function escapeAttribute(value) {
+        return escapeHtml(value);
       }
 
       function updateSearchCount(visible = state.conversations.length, total = state.conversations.length) {
