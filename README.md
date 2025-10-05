@@ -2,11 +2,15 @@
 
 A privacy-focused, client-side web application for searching, viewing, and exporting conversations from multiple AI chat providers in a single unified interface.
 
+**🌐 Try it now: [unifiedchatsearch.com](https://unifiedchatsearch.com/)**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Overview
 
 Unified Chat Search lets you load conversation exports from ChatGPT and Claude, search across all your AI conversations simultaneously, and export selected chats to Markdown. All processing happens locally in your browser—your data never leaves your device.
+
+![Unified Chat Search Interface](images/image_splash_screen.png)
 
 **Key Benefits:**
 
@@ -19,6 +23,8 @@ Unified Chat Search lets you load conversation exports from ChatGPT and Claude, 
 ## Features
 
 ### Core Functionality
+
+![User Interface](images/image_user_interface.png)
 
 - **Multi-Provider Support**: Load conversations from ChatGPT and Claude simultaneously
 - **Fuzzy Search**: Search across conversation titles and message content with real-time results
@@ -106,10 +112,13 @@ Supported file types:
 
 ### 2. Search Conversations
 
+![Search and Export](images/image_search_export.png)
+
 - Type in the search bar to find conversations by title or content
 - Toggle **search scope** to search titles only or full message content
 - Search results update in real-time as you type
 - Uses fuzzy matching for flexible searching
+- Search across **multiple providers simultaneously**—find conversations from both ChatGPT and Claude in one unified search
 
 ### 3. View Conversations
 
@@ -124,7 +133,7 @@ Supported file types:
 1. Select one or more conversations using checkboxes
 2. Use **"Select All"** to select all visible/filtered conversations
 3. Click **"Export Selected"** to configure export options:
-   - **Single file**: Combine all selected conversations into one Markdown file
+   - **Single file**: Combine all selected conversations into one Markdown file (even from different providers)
    - **Separate files**: Export each conversation as an individual Markdown file
    - **Filename prefix**: Add an optional prefix for organization
 4. Downloads are generated client-side as `.md` files
@@ -312,6 +321,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 Copyright (c) 2025 Henry Sowell
 
 ## Acknowledgments
+
+Special thanks to [@levysoft](https://github.com/levysoft) for [llm-chat-explorer](https://github.com/levysoft/llm-chat-explorer), which served as an inspiration for this project.
 
 Built with modern web standards and powered by excellent open-source libraries:
 
