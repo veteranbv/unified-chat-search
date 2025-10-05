@@ -359,6 +359,7 @@
       -webkit-backdrop-filter: blur(22px);
       backdrop-filter: blur(22px);
       box-shadow: inset -1px 0 0 rgba(209, 213, 223, 0.4);
+      transition: flex-basis 0.28s ease, width 0.28s ease, opacity 0.28s ease;
     }
 
     .sidebar-header {
@@ -814,11 +815,28 @@
       backdrop-filter: blur(18px);
       border-left: 1px solid rgba(209, 213, 223, 0.4);
       min-width: 0;
+      transition: border-left-color 0.28s ease, padding 0.28s ease;
     }
 
     body.dark-mode .main-panel {
       background: rgba(17, 24, 39, 0.82);
       border-left-color: rgba(86, 93, 115, 0.3);
+    }
+
+    body.sidebar-collapsed .sidebar {
+      flex: 0 0 0;
+      width: 0;
+      min-width: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.sidebar-collapsed .main-panel {
+      border-left-color: transparent;
+    }
+
+    body.sidebar-collapsed .conversation-header {
+      padding-left: 24px;
     }
 
     .conversation-header {
@@ -1671,6 +1689,14 @@
           <h1 id="conversation-title">Select a conversation</h1>
         </div>
         <div class="conversation-actions">
+          <button id="sidebar-toggle" class="icon-button" type="button" aria-pressed="false" aria-label="Collapse sidebar">
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <label class="switch" title="Toggle dark mode">
+            <input id="header-dark-mode-toggle" type="checkbox">
+            <span class="switch-slider" aria-hidden="true"></span>
+            <span class="switch-label">Dark mode</span>
+          </label>
           <label class="switch" title="Toggle markdown rendering">
             <input id="markdown-toggle" type="checkbox" checked>
             <span class="switch-slider" aria-hidden="true"></span>
@@ -1724,7 +1750,6 @@
           <label for="language-select">Interface language</label>
           <select id="language-select">
             <option value="en">English</option>
-            <option value="it">Italiano</option>
           </select>
         </fieldset>
         <fieldset>
@@ -1792,7 +1817,8 @@
         language: 'ucs.pref.language',
         rememberScroll: 'ucs.pref.rememberScroll',
         searchQuery: 'ucs.state.searchQuery',
-        searchScopes: 'ucs.state.searchScopes'
+        searchScopes: 'ucs.state.searchScopes',
+        sidebarCollapsed: 'ucs.pref.sidebarCollapsed'
       };
 
       const COLLAPSE_STORAGE_KEY = 'ucs.pref.sidebarCollapse';
@@ -1821,6 +1847,8 @@
           openInProvider: 'Open in Provider',
           exportChat: 'Export Chat',
           settings: 'Settings',
+          collapseSidebar: 'Collapse sidebar',
+          expandSidebar: 'Expand sidebar',
           selectConversation: 'Select a conversation',
           emptyState: 'Load conversations to start exploring.',
           appearance: 'Appearance',
@@ -1898,10 +1926,12 @@
         conversationList: document.getElementById('conversation-list'),
         providerBadge: document.getElementById('provider-badge'),
         conversationTitle: document.getElementById('conversation-title'),
+        headerDarkModeToggle: document.getElementById('header-dark-mode-toggle'),
         markdownToggle: document.getElementById('markdown-toggle'),
         providerLink: document.getElementById('provider-link'),
         exportCurrent: document.getElementById('export-current'),
         settingsButton: document.getElementById('settings-button'),
+        sidebarToggle: document.getElementById('sidebar-toggle'),
         conversationMeta: document.getElementById('conversation-meta'),
         conversationContent: document.getElementById('conversation-content'),
         emptyState: document.getElementById('empty-state'),
@@ -1936,6 +1966,7 @@
           markdown: true,
           language: 'en',
           rememberScroll: true,
+          sidebarCollapsed: false,
           collapsedSections: {
             files: false,
             search: false,
@@ -2052,12 +2083,17 @@
           }
         });
 
-        elements.darkModeToggle.addEventListener('change', (event) => {
-          const enabled = Boolean(event.target.checked);
-          state.preferences.darkMode = enabled;
-          persistPreference(STORAGE_KEYS.darkMode, enabled);
-          applyAppearance();
-        });
+        if (elements.darkModeToggle) {
+          elements.darkModeToggle.addEventListener('change', (event) => {
+            setDarkMode(event.target.checked);
+          });
+        }
+
+        if (elements.headerDarkModeToggle) {
+          elements.headerDarkModeToggle.addEventListener('change', (event) => {
+            setDarkMode(event.target.checked);
+          });
+        }
 
         elements.rememberScrollToggle.addEventListener('change', (event) => {
           const enabled = Boolean(event.target.checked);
@@ -2134,6 +2170,12 @@
           exportConversations([conversation], { mode: 'individual' });
         });
 
+        if (elements.sidebarToggle) {
+          elements.sidebarToggle.addEventListener('click', () => {
+            applySidebarCollapsed(!state.preferences.sidebarCollapsed, true);
+          });
+        }
+
         elements.selectAll.addEventListener('click', () => {
           selectAllVisibleConversations();
         });
@@ -2202,7 +2244,7 @@
         if (storedDark !== null) {
           state.preferences.darkMode = storedDark === 'true';
         }
-        elements.darkModeToggle.checked = state.preferences.darkMode;
+        updateDarkModeToggles();
 
         const storedMarkdown = localStorage.getItem(STORAGE_KEYS.markdown);
         if (storedMarkdown !== null) {
@@ -2221,6 +2263,11 @@
           state.preferences.language = TRANSLATIONS[storedLanguage] ? storedLanguage : 'en';
         }
         elements.languageSelect.value = state.preferences.language;
+
+        const storedSidebar = localStorage.getItem(STORAGE_KEYS.sidebarCollapsed);
+        if (storedSidebar !== null) {
+          state.preferences.sidebarCollapsed = storedSidebar === 'true';
+        }
 
         const storedQuery = localStorage.getItem(STORAGE_KEYS.searchQuery);
         if (storedQuery) {
@@ -2253,6 +2300,9 @@
             // ignore malformed preference
           }
         }
+
+        updateDarkModeToggles();
+        applySidebarCollapsed(state.preferences.sidebarCollapsed, false);
       }
 
       function applyTranslations() {
@@ -2284,6 +2334,16 @@
         elements.timelineHeading.textContent = strings.timelineHeading;
         elements.toggleOrder.title = strings.toggleOrder;
         elements.toggleOrder.setAttribute('aria-label', strings.toggleOrder);
+        if (elements.headerDarkModeToggle) {
+          const label = elements.headerDarkModeToggle.closest('label');
+          if (label) {
+            const textSpan = label.querySelector('.switch-label');
+            if (textSpan) {
+              textSpan.textContent = strings.darkMode;
+            }
+            label.title = strings.darkMode;
+          }
+        }
         elements.markdownToggle.nextElementSibling.nextElementSibling.textContent = strings.markdownLabel;
         elements.providerLink.querySelector('span').textContent = strings.openInProvider;
         elements.exportCurrent.querySelector('span').textContent = strings.exportChat;
@@ -2309,6 +2369,7 @@
         updateCollapseToggleLabels();
         updateSearchCount();
         updateSelectionUI();
+        updateSidebarToggleAppearance();
       }
 
       function applyAppearance() {
@@ -2316,6 +2377,48 @@
           elements.body.classList.add('dark-mode');
         } else {
           elements.body.classList.remove('dark-mode');
+        }
+      }
+
+      function updateDarkModeToggles() {
+        if (elements.darkModeToggle) {
+          elements.darkModeToggle.checked = state.preferences.darkMode;
+        }
+        if (elements.headerDarkModeToggle) {
+          elements.headerDarkModeToggle.checked = state.preferences.darkMode;
+        }
+      }
+
+      function setDarkMode(enabled) {
+        const value = Boolean(enabled);
+        state.preferences.darkMode = value;
+        updateDarkModeToggles();
+        applyAppearance();
+        persistPreference(STORAGE_KEYS.darkMode, value);
+      }
+
+      function applySidebarCollapsed(collapsed, persist = false) {
+        state.preferences.sidebarCollapsed = Boolean(collapsed);
+        elements.body.classList.toggle('sidebar-collapsed', state.preferences.sidebarCollapsed);
+        updateSidebarToggleAppearance();
+        if (persist) {
+          persistPreference(STORAGE_KEYS.sidebarCollapsed, state.preferences.sidebarCollapsed);
+        }
+      }
+
+      function updateSidebarToggleAppearance() {
+        if (!elements.sidebarToggle) {
+          return;
+        }
+        const strings = getStrings();
+        const collapsed = state.preferences.sidebarCollapsed;
+        const label = collapsed ? strings.expandSidebar : strings.collapseSidebar;
+        elements.sidebarToggle.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        elements.sidebarToggle.setAttribute('aria-label', label);
+        elements.sidebarToggle.title = label;
+        const icon = elements.sidebarToggle.querySelector('i');
+        if (icon) {
+          icon.className = collapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
         }
       }
 
