@@ -346,7 +346,7 @@ Potential future enhancements:
 
 If you encounter issues or have questions:
 
-1. Check the [Issues](https://github.com/yourusername/unified-chat-search/issues) page
+1. Check the [Issues](https://github.com/veteranbv/unified-chat-search/issues) page
 2. Search for existing issues or create a new one
 3. Provide details about your browser, OS, and the issue
 
@@ -374,3 +374,9 @@ A: Yes. The CSS is in the `<style>` section at the top of `index.html`. Modify C
 A: The UI is responsive and works on mobile browsers, though the experience is optimized for desktop.
 
 ---
+
+<div align="center">
+
+**[⭐ Star on GitHub](https://github.com/veteranbv/unified-chat-search)** • **[🌐 Try Live Demo](https://unifiedchatsearch.com/)** • **[📝 View Source](https://github.com/veteranbv/unified-chat-search)**
+
+</div>

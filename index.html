@@ -1749,6 +1749,61 @@
         padding: 18px;
       }
     }
+
+    /* Page footer */
+    .page-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.85);
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      z-index: 999;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    body.dark-mode .page-footer {
+      background: rgba(17, 24, 39, 0.85);
+    }
+
+    .page-footer a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.15s ease;
+    }
+
+    .page-footer a:hover {
+      opacity: 0.8;
+    }
+
+    .page-footer-separator {
+      color: var(--border-color);
+      user-select: none;
+    }
+
+    #upload-screen .page-footer {
+      opacity: 0;
+      transform: translateY(100%);
+      pointer-events: none;
+    }
+
+    @media (max-width: 720px) {
+      .page-footer {
+        font-size: 0.8125rem;
+        padding: 10px 16px;
+        gap: 12px;
+      }
+    }
   </style>
 </head>
 
@@ -2058,6 +2113,17 @@
       </footer>
     </div>
   </div>
+
+  <footer class="page-footer">
+    <a href="https://github.com/veteranbv/unified-chat-search" target="_blank" rel="noopener noreferrer">
+      <i class="fab fa-github" aria-hidden="true"></i> View on GitHub
+    </a>
+    <span class="page-footer-separator" aria-hidden="true">•</span>
+    <a href="https://github.com/veteranbv/unified-chat-search/issues" target="_blank" rel="noopener noreferrer">Report Issue</a>
+    <span class="page-footer-separator" aria-hidden="true">•</span>
+    <span>Made with privacy in mind</span>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
